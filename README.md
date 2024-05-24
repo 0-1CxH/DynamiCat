@@ -7,6 +7,8 @@
 
 multi process tokenization for general dataset of different purposes / formats
 
+### PretrainDatasetTokenizer
+
 ### SFTDatasetTokenizer
 
 tokenize the dataset of the SFT format, usually contains prompt and response
@@ -24,7 +26,15 @@ tokenize the dataset of the DPO format, usually contains prompt, chosen and reje
 
 ## GeneralTensorPlanner
 
-plan on the tokenized tensors to make them meets some requirements 
+plan on the tokenized tensors to make them meets some requirements
+
+
+### SmartBatchingTensorPlannerMixin
+
+
+### FixedBatchSizeTensorPlanner
+
+
 
 ### GPUMemoryRestrictedTensorPlanner
 
