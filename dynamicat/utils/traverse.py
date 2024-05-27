@@ -20,12 +20,10 @@ def traverse_folder(folder_path, is_recursive, filter_func):
                 if filter_func(file):
                     yield os.path.join(folder_path, file)
 
-def traverse_with_mirror_folder(read_folder_path, mirror_folder_path, is_recursive, filter_func):
+def traverse_with_mirror_folder(read_folder_path: str, mirror_folder_path: str, is_recursive, filter_func):
     for filepath in traverse_folder(read_folder_path, is_recursive, filter_func):
         rel_path = os.path.relpath(filepath, read_folder_path)
         mirror_path = os.path.join(mirror_folder_path, rel_path)
-        # check existence of mirror folder
-        # mirror_folder = os.path.dirname(mirror_path)
         yield filepath, mirror_path
 
 def traverse_and_process_with_mirror_folder(read_folder_path, mirror_folder_path, is_recursive, filter_func, process_func):

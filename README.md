@@ -10,7 +10,7 @@ multi process tokenization for general dataset of different purposes / formats
 ### PretrainDatasetTokenizer
 
 ### SFTDatasetTokenizer
-
+(multi-turn conversation using mask)
 tokenize the dataset of the SFT format, usually contains prompt and response
 
 ### InferenceDatasetTokenizer
