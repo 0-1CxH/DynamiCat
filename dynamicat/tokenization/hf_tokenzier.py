@@ -32,7 +32,7 @@ class GeneralDatasetHfTokenizer(GeneralDatasetTokenizer):
         )
         self.tokenizer.padding_side = 'right'
         self.tokenizer.truncation_side = 'right'
-        logger.debug(f"{self.tokenizer=}")
+        logger.debug(f"{self}")
         return self.tokenizer
 
     def __str__(self):
@@ -59,4 +59,4 @@ class GeneralDatasetHfTokenizer(GeneralDatasetTokenizer):
             truncation=True,
             max_length=max_len,
             add_special_tokens=False
-        )
+        ).input_ids

@@ -1,6 +1,10 @@
+import functools
 import json
+import os.path
 
-from dynamicat.tokenization.tokenizer_base import GeneralDatasetMetadata, GeneralDataset
+from loguru import logger
+
+from dynamicat.tokenization.tokenizer_base import GeneralDatasetMetadata, GeneralDatasetBase
 from dynamicat.utils import traverse_files_with_suffix
 
 
@@ -24,7 +28,7 @@ class FileBaseDatasetMetadata(GeneralDatasetMetadata):
         return f"{super().__str__()}, {self.file_format=}"
 
 
-class FileBaseDataset(GeneralDataset):
+class FileBaseDataset(GeneralDatasetBase):
 
     def __init__(self, metadata: FileBaseDatasetMetadata):
         super().__init__(metadata)
@@ -55,6 +59,24 @@ class FileBaseDataset(GeneralDataset):
 
     def __len__(self):
         return len(self.data_store)
+
+    @staticmethod
+    def _single_record_to_tensor_static_wrapper(input_item):
+        text_to_tensor_func, record, tokenize_configs_iter = input_item
+        current_record_tensor = {}
+        for field, tokenization_configs in tokenize_configs_iter:
+            current_record_tensor[field] = text_to_tensor_func(record[field], **tokenization_configs)
+        return current_record_tensor
+
+    def tokenize_dataset_and_save_pt_file(self, text_to_tensor_func, save_path=None, use_mproc=True):
+        if not save_path:
+            dataset_folder_path = self.metadata.folder_path
+            save_path = os.path.join(
+                os.path.dirname(dataset_folder_path),
+                f"{os.path.basename(dataset_folder_path)}.pt"
+            )
+
+        return super().tokenize_dataset_and_save_pt_file(text_to_tensor_func, save_path, use_mproc)
 
 
 

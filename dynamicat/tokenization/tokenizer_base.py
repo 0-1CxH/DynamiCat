@@ -1,5 +1,11 @@
 from dataclasses import dataclass
 
+import torch
+from loguru import logger
+
+from dynamicat.utils import mproc_map
+
+
 @dataclass
 class GeneralDatasetMetadata:
     def __init__(self, dataset_metadata: dict):
@@ -8,8 +14,6 @@ class GeneralDatasetMetadata:
         assert self.field_names, "field_names is required"
         self.field_max_lengths = dataset_metadata.get("field_max_lengths", [1024] * len(self.field_names))
         assert len(self.field_max_lengths) == len(self.field_names), "field_max_lengths should have the same length as field_names"
-        # self.field_padding_sides = dataset_metadata.get("field_padding_sides", ["right"] * len(self.field_names))
-        # assert len(self.field_padding_sides) == len(self.field_names), "field_padding_sides should have the same length as field_names"
         self.field_truncation_sides = dataset_metadata.get("field_truncation_sides", ["right"] * len(self.field_names))
         assert len(self.field_truncation_sides) == len(self.field_names), "field_truncation_sides should have the same length as field_names"
 
@@ -19,7 +23,6 @@ class GeneralDatasetMetadata:
             yield {
                 "field_name": field_name,
                 "field_max_length": self.field_max_lengths[idx],
-                # "field_padding_side": self.field_padding_sides[idx],
                 "field_truncation_side": self.field_truncation_sides[idx]
             }
 
@@ -30,7 +33,7 @@ class GeneralDatasetMetadata:
         return f"{__class__.__name__}({self.dataset_name=}), " + ", ".join([str(_) for _ in self.iterate_fields()])
 
 
-class GeneralDataset:
+class GeneralDatasetBase:
     def __init__(self, metadata: GeneralDatasetMetadata):
         self.metadata = metadata
 
@@ -38,13 +41,12 @@ class GeneralDataset:
         raise NotImplementedError
 
     def iterate(self) -> iter:
-        # must return iterable
+        # must return iterable of dicts
         raise NotImplementedError
 
     def make_tokenization_configs(self):
         for field in self.metadata.iterate_fields():
             yield field['field_name'], {
-                # "padding_side": field["field_padding_side"],
                 "truncation_side": field["field_truncation_side"],
                 "max_length": field["field_max_length"]
             }
@@ -52,31 +54,47 @@ class GeneralDataset:
     def __str__(self):
         return f"{__class__.__name__}(metadata={self.metadata=})"
 
+    @staticmethod
+    def _single_record_to_tensor_static_wrapper(text_to_tensor_func):
+        # return a wrapped function that takes a record and returns a dict of tensors
+        raise NotImplementedError
+
+
+    def dataset_to_tensors(self, text_to_tensor_func, use_mproc=True):
+        if use_mproc:
+            tokenize_configs_iter = [_ for _ in self.make_tokenization_configs()]
+            for _ in mproc_map(
+                func=self._single_record_to_tensor_static_wrapper,
+                items=[(text_to_tensor_func, record, tokenize_configs_iter) for record in self.iterate()]
+            ):
+                yield _
+        else:
+            for record in self.iterate():
+                input_item = (text_to_tensor_func, record, self.make_tokenization_configs())
+                yield self._single_record_to_tensor_static_wrapper(input_item)
+
+    def tokenize_dataset_and_save_pt_file(self, text_to_tensor_func, save_path, use_mproc=True):
+        tensors = list(self.dataset_to_tensors(text_to_tensor_func, use_mproc))
+        logger.info(f"saving tensors of length {len(tensors)} to {save_path}")
+        torch.save(tensors, save_path)
+        return tensors
+
 
 
 class GeneralDatasetTokenizer:
     def __init__(self):
         self.tokenizer = self.load_tokenizer()
-        self.tokenize_function = self.tokenizer.__call__
-        # self.tokenizer.padding_side = "right"
+        self.tokenizer.padding_side = "right"
         self.tokenizer.truncation_side = "left"
 
     def load_tokenizer(self):
         raise NotImplementedError
 
     def text_to_tensor(self, text, **tokenization_configs):
-        # if "padding_side" in tokenization_configs:
-        #     self.tokenizer.padding_side = tokenization_configs["padding_side"]
         if "truncation_side" in tokenization_configs:
             self.tokenizer.truncation_side = tokenization_configs["truncation_side"]
         if "max_length" in tokenization_configs:
             self.tokenizer.max_length = tokenization_configs["max_length"]
-        return self.tokenize_function(text)
+        return self.tokenizer.__call__(text)
 
 
-    def dataset_to_tensors(self, dataset: GeneralDataset):
-        for record in dataset.iterate():
-            current_record_tensors = {}
-            for field, tokenization_configs in dataset.make_tokenization_configs():
-                current_record_tensors[field] = self.text_to_tensor(record[field], **tokenization_configs)
-            yield current_record_tensors

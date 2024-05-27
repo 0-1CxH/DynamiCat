@@ -5,7 +5,9 @@ from multiprocessing import cpu_count
 from loguru import logger
 from tqdm import tqdm
 
-def mproc_map(func, items, chunk_size, ordered=True, max_workers=cpu_count()):
+def mproc_map(func, items, chunk_size=None, ordered=True, max_workers=cpu_count()):
+    if not chunk_size:
+        chunk_size = max(1, len(items) // max_workers)
     logger.info(f"Using multi processing map ({ordered=}) to {func.__name__} with {len(items)} items({chunk_size=}), parallelism={max_workers}")
     results = []
     with multiprocessing.Pool(processes=max_workers) as pool:

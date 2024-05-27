@@ -2,6 +2,7 @@ import os
 
 from dynamicat.tokenization.hf_tokenzier import GeneralDatasetHfTokenizer
 
+
 if __name__ == '__main__':
     test_folder_base = os.path.dirname(os.path.dirname(__file__))
     print(test_folder_base)
@@ -23,3 +24,14 @@ if __name__ == '__main__':
         sentence,
         max_length=100
     ))
+
+    # test dataset to tensor
+    from test.tokenization.test_datasets import d
+    d.load()
+    # for data in d.iterate():
+    #     print(data)
+    print(len(d))
+    for _ in d.make_tokenization_configs():
+        print(_)
+    # print(list(d.dataset_to_tensors(t.text_to_tensor, use_mproc=True)))
+    print(d.tokenize_dataset_and_save_pt_file(t.text_to_tensor))

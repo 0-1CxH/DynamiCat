@@ -7,6 +7,8 @@
 
 multi process tokenization for general dataset of different purposes / formats
 
+## GeneralDatasetHfTokenizer
+
 ### PretrainDatasetTokenizer
 
 ### SFTDatasetTokenizer
