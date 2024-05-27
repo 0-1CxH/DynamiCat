@@ -50,13 +50,20 @@ class GeneralDatasetHfTokenizer(GeneralDatasetTokenizer):
 
     def text_to_tensor(self, text, **tokenization_configs):
         truc_side = tokenization_configs.get("truncation_side")
-        max_len = tokenization_configs.get("max_length")
+        max_len = tokenization_configs.get("field_max_length")
+        need_truncation = True
         if truc_side:
-            self.tokenizer.truncation_side = truc_side
+            if truc_side == "none":
+                need_truncation = False
+            else:
+                self.tokenizer.truncation_side = truc_side
+        if not max_len:
+            need_truncation = False
+
         return self.tokenizer(
             text,
             return_tensors="pt",
-            truncation=True,
+            truncation=need_truncation,
             max_length=max_len,
             add_special_tokens=False
         ).input_ids

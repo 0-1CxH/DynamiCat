@@ -1,23 +1,29 @@
-from dynamicat.tokenization.filebase_dataset import FileBaseDataset, FileBaseDatasetMetadata
+from dynamicat.tokenization.filebase_dataset import FileBaseDataset
 
 import os
+
+from test.tokenization.test_dataset_metadata import m3, m5, m6, m7
 
 test_folder_base = os.path.dirname(os.path.dirname(__file__))
 print(test_folder_base)
 d = FileBaseDataset(
-        FileBaseDatasetMetadata({
-            "dataset_name": "test_json_data",
-            "field_names": ["prompt", "chosen"],
-            "field_max_lengths": [32, 8],
-            "field_truncation_sides": ["left", "right"],
-            "file_format": "jsonl",
-            "folder_path": os.path.join(test_folder_base, "test_jsonl_data")
-        })
+        m5
     )
 
+d2 = FileBaseDataset(
+    m6)
+
+d3 = FileBaseDataset(
+    m7
+)
+
+
 if __name__ == '__main__':
-    d.load()
-    for data in d.iterate():
-        print(data)
-    for _ in d.make_tokenization_configs():
+    for _ in [d, d2, d3]:
         print(_)
+        _.load()
+        print(len(_))
+        # for data in _.iterate():
+        #     print(data)
+        for _ in _.make_tokenization_configs():
+            print(_)

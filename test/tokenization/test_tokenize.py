@@ -1,4 +1,5 @@
 import os
+import time
 
 from dynamicat.tokenization.hf_tokenzier import GeneralDatasetHfTokenizer
 
@@ -26,12 +27,15 @@ if __name__ == '__main__':
     ))
 
     # test dataset to tensor
-    from test.tokenization.test_datasets import d
-    d.load()
-    # for data in d.iterate():
-    #     print(data)
-    print(len(d))
-    for _ in d.make_tokenization_configs():
+    from test.tokenization.test_datasets import d, d2
+    for _ in [d2]:
         print(_)
-    # print(list(d.dataset_to_tensors(t.text_to_tensor, use_mproc=True)))
-    print(d.tokenize_dataset_and_save_pt_file(t.text_to_tensor))
+        _.load()
+        print(len(_))
+        for data in _.iterate():
+            print(data)
+        for c in _.make_tokenization_configs():
+            print(c)
+        # print(list(_.dataset_to_tensors(t.text_to_tensor, use_mproc=True)))
+        _.tokenize_dataset_and_save_pt_file(t.text_to_tensor)
+        time.sleep(5)

@@ -1,3 +1,4 @@
+from abc import abstractmethod
 from dataclasses import dataclass
 
 import torch
@@ -12,18 +13,26 @@ class GeneralDatasetMetadata:
         self.dataset_name = dataset_metadata.get("dataset_name", "default_dataset")
         self.field_names = dataset_metadata.get("field_names")
         assert self.field_names, "field_names is required"
-        self.field_max_lengths = dataset_metadata.get("field_max_lengths", [1024] * len(self.field_names))
+        self.max_seq_len = dataset_metadata.get("max_seq_len") # None means no truncation
+        self.field_max_lengths = dataset_metadata.get("field_max_lengths", [None] * len(self.field_names)) # None represents no truncation
+        if None in self.field_max_lengths:
+            assert self.max_seq_len is not None or not all(self.field_max_lengths), "if field_max_lengths has default, max_seq_len should not be default"
+        if self.max_seq_len:
+            assert sum([i for i in self.field_max_lengths if
+                        i is not None]) <= self.max_seq_len, "sum of field_max_lengths should be less than max_seq_len"
         assert len(self.field_max_lengths) == len(self.field_names), "field_max_lengths should have the same length as field_names"
         self.field_truncation_sides = dataset_metadata.get("field_truncation_sides", ["right"] * len(self.field_names))
-        assert len(self.field_truncation_sides) == len(self.field_names), "field_truncation_sides should have the same length as field_names"
+        if not self.field_max_lengths:
+            assert len(self.field_truncation_sides) == len(self.field_names), "field_truncation_sides should have the same length as field_names"
 
 
     def iterate_fields(self):
         for idx, field_name in enumerate(self.field_names):
             yield {
                 "field_name": field_name,
+                "max_sequence_length": self.max_seq_len,
                 "field_max_length": self.field_max_lengths[idx],
-                "field_truncation_side": self.field_truncation_sides[idx]
+                "field_truncation_side": self.field_truncation_sides[idx] if self.field_truncation_sides else "none"
             }
 
     def get_field_count(self):
@@ -37,9 +46,11 @@ class GeneralDatasetBase:
     def __init__(self, metadata: GeneralDatasetMetadata):
         self.metadata = metadata
 
+    @abstractmethod
     def load(self):
         raise NotImplementedError
 
+    @abstractmethod
     def iterate(self) -> iter:
         # must return iterable of dicts
         raise NotImplementedError
@@ -48,7 +59,8 @@ class GeneralDatasetBase:
         for field in self.metadata.iterate_fields():
             yield field['field_name'], {
                 "truncation_side": field["field_truncation_side"],
-                "max_length": field["field_max_length"]
+                "max_sequence_length": field["max_sequence_length"],
+                "field_max_length": field["field_max_length"]
             }
 
     def __str__(self):
@@ -87,14 +99,12 @@ class GeneralDatasetTokenizer:
         self.tokenizer.padding_side = "right"
         self.tokenizer.truncation_side = "left"
 
+    @abstractmethod
     def load_tokenizer(self):
         raise NotImplementedError
 
+    @abstractmethod
     def text_to_tensor(self, text, **tokenization_configs):
-        if "truncation_side" in tokenization_configs:
-            self.tokenizer.truncation_side = tokenization_configs["truncation_side"]
-        if "max_length" in tokenization_configs:
-            self.tokenizer.max_length = tokenization_configs["max_length"]
-        return self.tokenizer.__call__(text)
+        raise NotImplementedError
 
 

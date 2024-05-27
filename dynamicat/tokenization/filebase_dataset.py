@@ -1,4 +1,3 @@
-import functools
 import json
 import os.path
 
@@ -25,7 +24,8 @@ class FileBaseDatasetMetadata(GeneralDatasetMetadata):
 
 
     def __str__(self):
-        return f"{super().__str__()}, {self.file_format=}"
+        return (f"{__class__.__name__}({self.dataset_name=}<format={self.file_format}, folder_path={self.folder_path}>)" +
+                ", ".join([str(_) for _ in self.iterate_fields()]))
 
 
 class FileBaseDataset(GeneralDatasetBase):
@@ -46,7 +46,7 @@ class FileBaseDataset(GeneralDatasetBase):
                     for json_obj in json_list_obj:
                         self.data_store.append(json_obj)
                 elif self.metadata.file_format == "txt": # one file as a record
-                    self.data_store.append(f.read())
+                    self.data_store.append({"text": f.read()})
                 else:
                     raise NotImplementedError
 
@@ -64,8 +64,21 @@ class FileBaseDataset(GeneralDatasetBase):
     def _single_record_to_tensor_static_wrapper(input_item):
         text_to_tensor_func, record, tokenize_configs_iter = input_item
         current_record_tensor = {}
+        used_token_length = 0
         for field, tokenization_configs in tokenize_configs_iter:
+            max_seq_len = tokenization_configs.get("max_sequence_length")
+            field_max_length = tokenization_configs.get("field_max_length")
+            if not max_seq_len:
+                field_max_length = None
+            else:
+                if not field_max_length:
+                    field_max_length = max(0, max_seq_len - used_token_length)
+                else:
+                    field_max_length = min(field_max_length, max_seq_len - used_token_length)
+            tokenization_configs["field_max_length"] = field_max_length
             current_record_tensor[field] = text_to_tensor_func(record[field], **tokenization_configs)
+            used_token_length += current_record_tensor[field].shape[1]
+            logger.debug(f"{field}, {tokenization_configs}, {used_token_length=}")
         return current_record_tensor
 
     def tokenize_dataset_and_save_pt_file(self, text_to_tensor_func, save_path=None, use_mproc=True):
