@@ -6,8 +6,9 @@ class GeneralTensorPlanItem:
         else:
             self.tensor_records = []
 
-    def add_tensor_record(self, tensor_record):
-        raise NotImplementedError
+    def add_tensor_record_if_possible(self, tensor_record):
+        self.tensor_records.append(tensor_record)
+        return True
 
     def __len__(self):
         return len(self.tensor_records)

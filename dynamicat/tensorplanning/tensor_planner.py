@@ -23,7 +23,7 @@ class TensorPlannerBase:
     @abstractmethod
     def plan_tensor_records(self, tensor_records):
         # return tensor plan base on plan type
-        pass
+        raise NotImplementedError
 
     def plan_tensor_records_and_save(self, tensor_records, save_path):
         tensor_plan = self.plan_tensor_records(tensor_records)
@@ -120,9 +120,10 @@ class KeyFieldLengthDifferenceRestrictedTensorPlanner(TensorPlannerBase, SmartBa
 
 
 class KeyFieldMaxLengthRestrictedTensorPlanner(TensorPlannerBase, SmartBatchingMixIn):
-    def __init__(self, max_field_length, primary_key):
+    def __init__(self, max_field_length, batch_size, primary_key):
         super().__init__("MaxLengthRestricted")
         self.max_field_length = max_field_length
+        self.batch_size = batch_size
         self.primary_key = primary_key
 
     def __str__(self):
@@ -133,19 +134,23 @@ class KeyFieldMaxLengthRestrictedTensorPlanner(TensorPlannerBase, SmartBatchingM
         if enable_smart_batching:
             tensor_records = self.exec_smart_batching(tensor_records, self.single_tensor_length_by_field(self.primary_key))
 
+        current_tensor_plan_item = GeneralTensorPlanItem()
         for tensor_record in tensor_records:
             if tensor_record.get(self.primary_key).numel() <= self.max_field_length:
-                tensor_plan.add_tensor_plan_item(GeneralTensorPlanItem([tensor_record]))
+                tensor_records_to_add = [tensor_record]
             else: # split the tensor
                 key_field_tensor = tensor_record.get(self.primary_key)
-                tensor_plan.add_tensor_plan_item(
-                        GeneralTensorPlanItem(
-                            [
-                                {self.primary_key: key_field_tensor[..., i: i + self.max_field_length]}
-                                for i in range(0, key_field_tensor.shape[-1], self.max_field_length)
-                            ]
-                        )
-                    )
+                tensor_records_to_add = [
+                    {self.primary_key: key_field_tensor[..., i: i + self.max_field_length]}
+                    for i in range(0, key_field_tensor.shape[-1], self.max_field_length)
+                ]
+            for tensor_record_to_add in tensor_records_to_add:
+                if len(current_tensor_plan_item) >= self.batch_size:
+                    tensor_plan.add_tensor_plan_item(current_tensor_plan_item)
+                    current_tensor_plan_item = GeneralTensorPlanItem()
+                current_tensor_plan_item.add_tensor_record_if_possible(tensor_record_to_add)
+        if current_tensor_plan_item:
+            tensor_plan.add_tensor_plan_item(current_tensor_plan_item)
         return tensor_plan
 
 
