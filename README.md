@@ -22,87 +22,47 @@ Experiment environment:
 TODO: test with more public datasets and models to replace this table 
 
 
+# support
+pre-training, fine-tuning, inference
+
+
 # modules documentation
 
-
-
-## GeneralDatasetTokenizer
-
-multi process tokenization for general dataset of different purposes / formats
-
-## GeneralDatasetHfTokenizer
-
-### PretrainDatasetTokenizer
-
-### SFTDatasetTokenizer
-(multi-turn conversation using mask)
-tokenize the dataset of the SFT format, usually contains prompt and response
-
-### InferenceDatasetTokenizer
-
-tokenize the dataset of the Inference format, usually only contains prompt
-
-### DPODatasetTokenizer
-
-tokenize the dataset of the DPO format, usually contains prompt, chosen and rejected responses
-
-### ....
-
-
-## GeneralTensorPlanner
-
-plan on the tokenized tensors to make them meets some requirements
-
-
-### SmartBatchingTensorPlannerMixin
-
-
-### FixedBatchSizeTensorPlanner
+| Module                                            | Description                                                                             |
+|---------------------------------------------------|-----------------------------------------------------------------------------------------|
+| GeneralDatasetTokenizer (abstract)                | multi process tokenizer base class                                                      |
+| GeneralDatasetHfTokenizer                         | multi process Huggingface tokenization                                                  |
+| GeneralDatasetBase (abstract)                     | base class for different dataset types                                                  |
+| FileBaseDataset                                   | base class for file-based dataset                                                       |
+| DefaultTaskSpecificFileBaseDatasetMetadataFactory | default metadata of file-based dataset  for different tasks                             |
+| GeneralTensorPlanner (abstract)                   | base class for different tensor planners                                                |
+| SmartBatchingTensorPlannerMixin  (mix-in)         | smart batching functions                                                                |
+| FixedBatchSizeTensorPlanner                       | tensor planner for arranging data in fixed batch size                                   |
+| GPUMemoryRestrictedTensorPlanner                  | tensor planner for arranging data with GPU memory limit                                 |
+| KeyFieldLengthDifferenceRestrictedTensorPlanner   | tensor planner for arranging data with key field length difference limit and batch size |
+| KeyFieldMaxLengthRestrictedTensorPlanner          | tensor planner for arranging data with key field max length limit and batch size        |
+| GeneralDataCollator                               | collate the planned tensors to form the batch                                           |
 
 
 
-### GPUMemoryRestrictedTensorPlanner
-
-set the max memory usage of the GPU, and plan on the tensors to make them fit the memory
-
-### TokenDifferenceRestrictedTensorPlanner
-
-set the max token difference between the tensors, and plan on the tensors to make them fit the requirement
-
-### ...
 
 
-## GeneralPlannedDatasetCollator
-
-collate the planned tensors to form the batch
-
-### GPUMemoryRestrictedDatasetCollator
-
-collate the planned tensors with the GPU memory restriction (can be used with GPUMemoryRestrictedTensorPlanner)
-
-### TokenDifferenceRestrictedDatasetCollator
-
-collate the planned tensors with the token difference restriction (can be used with TokenDifferenceRestrictedTensorPlanner)
-
-### ...
-
-
-## GeneralTrainingPipeline
+ GeneralTrainingPipeline
 
 train the model with the planned dataset
 
-### DynamiCatSFTPipeline
+ DynamiCatSFTPipeline
 
-### ...
+...
 
-## Utils
+Utils
 
 some useful functions
 
-### MProcUtils
+ MProcUtils
 
-### RayDistUtils
+ RayDistUtils
 
-### DeepSpeedUtils
+ DeepSpeedUtils
 
-### ...
+...
