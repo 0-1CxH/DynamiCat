@@ -28,12 +28,12 @@ if __name__ == '__main__':
 
     # test dataset to tensor
     from test.tokenization.test_datasets import d, d2
-    for _ in [d2]:
+    for _ in [d, d2]:
         print(_)
         _.load()
         print(len(_))
-        for data in _.iterate():
-            print(data)
+        # for data in _.iterate():
+        #     print(data)
         for c in _.make_tokenization_configs():
             print(c)
         # print(list(_.dataset_to_tensors(t.text_to_tensor, use_mproc=True)))

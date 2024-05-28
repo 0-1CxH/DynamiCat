@@ -1,9 +1,9 @@
 import os
 
-from dynamicat.tokenization.filebase_dataset import FileBaseDataset, FileBaseDatasetMetadata
+from dynamicat.tokenization.filebase_dataset import FileBaseDatasetMetadata
 
 
-class DefaultTaskSpecificFileBaseDataset(FileBaseDataset):
+class DefaultTaskSpecificFileBaseDatasetMetadataFactory:
 
     @staticmethod
     def make_sft_metadata(
@@ -48,7 +48,7 @@ class DefaultTaskSpecificFileBaseDataset(FileBaseDataset):
         if pretrain_dataset_name is None:
             pretrain_dataset_name = os.path.basename(pretrain_dataset_folder_path)
         if pretrain_field_names is None:
-            pretrain_field_names = ["text"]
+            pretrain_field_names = ["content"]
         if pretrain_field_max_lengths is None:
             pretrain_field_max_lengths = [None]
 

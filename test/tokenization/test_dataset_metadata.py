@@ -1,5 +1,5 @@
 from dynamicat.tokenization.filebase_dataset import FileBaseDatasetMetadata
-from dynamicat.tokenization.task_specific_filebase_dataset import DefaultTaskSpecificFileBaseDataset
+from dynamicat.tokenization.task_specific_filebase_dataset import DefaultTaskSpecificFileBaseDatasetMetadataFactory
 from dynamicat.tokenization.tokenizer_base import GeneralDatasetMetadata
 import os
 
@@ -36,15 +36,15 @@ m4 = GeneralDatasetMetadata({
     "field_names": ["text"],
 })
 
-m5 = DefaultTaskSpecificFileBaseDataset.make_sft_metadata(
+m5 = DefaultTaskSpecificFileBaseDatasetMetadataFactory.make_sft_metadata(
     os.path.join(test_folder_base, "test_jsonl_data")
     )
 
-m6 = DefaultTaskSpecificFileBaseDataset.make_pretrain_metadata(
+m6 = DefaultTaskSpecificFileBaseDatasetMetadataFactory.make_pretrain_metadata(
     os.path.join(test_folder_base, "test_txt_data")
     )
 
-m7 = DefaultTaskSpecificFileBaseDataset.make_inference_metadata(
+m7 = DefaultTaskSpecificFileBaseDatasetMetadataFactory.make_inference_metadata(
     os.path.join(test_folder_base, "test_jsonl_data")
 )
 

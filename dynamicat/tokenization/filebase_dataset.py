@@ -46,7 +46,7 @@ class FileBaseDataset(GeneralDatasetBase):
                     for json_obj in json_list_obj:
                         self.data_store.append(json_obj)
                 elif self.metadata.file_format == "txt": # one file as a record
-                    self.data_store.append({"text": f.read()})
+                    self.data_store.append({"content": f.read()})
                 else:
                     raise NotImplementedError
 
