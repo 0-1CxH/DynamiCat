@@ -1,12 +1,26 @@
 
 # DynamiCat
 
-Efficient LLM training pipeline with dynamic batch size and dynamic padding that maximizes GPU memory utilization and training speed.
+Efficient LLM training pipeline with dynamic batch size, smart batching and dynamic padding that maximizes GPU memory utilization and training speed.
 
 
 ![compare_loss_curve.png](img%2Fcompare_loss_curve.png)
 
-Green line is loss curve of normal fine-tuning pipeline, orange line is loss curve of DynamiCat pipeline (with dynamic batch size and dynamic padding)
+X-axis represents training step, y-axis represents training loss. Green line is loss curve of normal fine-tuning pipeline, orange line is loss curve of DynamiCat pipeline (with dynamic batch size, smart batching and dynamic padding)
+
+
+Experiment environment:
+- 8x A800 80GB GPUs
+- Model size: 3B
+- Dataset size: 50k
+
+| Pipeline                    | Training time (per epoch) | GPU memory utilization |
+|-----------------------------|---------------------------|------------------------|
+| Normal fine-tuning pipeline | 160 min                   | 74.97%                 |
+| DynamiCat pipeline          | 27 min                    | 89.21%                 |
+
+TODO: test with more public datasets and models to replace this table 
+
 
 # modules documentation
 
