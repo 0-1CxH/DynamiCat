@@ -1,4 +1,10 @@
 from deepspeed import DeepSpeedConfig
+from loguru import logger
+from torch.optim.lr_scheduler import LambdaLR
+from transformers import get_scheduler, SchedulerType
+from deepspeed.ops.adam import DeepSpeedCPUAdam, FusedAdam
+
+from dynamicat.utils.custom_lr_scheduler import get_wsd_scheduler
 
 
 class DeepSpeedConfigBuilder:
@@ -168,50 +174,92 @@ class DeepSpeedConfigBuilder:
             return DeepSpeedConfig(result_config)
 
 
+class DeepSpeedModelTrainingUtils:
 
+    @classmethod
+    def _get_optimizer_model_parameters_with_weight_decay(
+            cls,
+            model,
+            weight_decay,
+            no_decay_name_list=("bias", 'layernorm.weight'),
+    ):
+        if weight_decay == 0.0:
+            return [
+                {
+                    "params": [parameter for _, parameter in model.named_parameters()],
+                    "weight_decay": weight_decay
+                }
+            ]
 
-if __name__ == '__main__':
-    DeepSpeedConfigBuilder.make_config_for_training(
-        32,
-        4,
-        3,
-        True,
-        True,
-        True,
-        return_dict=False,
-        tensorboard_save_path="test_path_0000"
-    ).print_user_config()
+        params_need_weight_decay = []
+        params_no_need_weight_decay = []
+        for param_name, parameter in model.named_parameters():
+            if parameter.requires_grad:
+                if any(_ in param_name for _ in no_decay_name_list):
+                    params_no_need_weight_decay.append(parameter)
+                else:
+                    params_need_weight_decay.append(parameter)
+        grouped_model_parameters = []
+        if len(params_need_weight_decay) > 0:
+            grouped_model_parameters.append(
+                {
+                    "params": params_need_weight_decay,
+                    "weight_decay": weight_decay
+                }
+            )
+        if len(params_no_need_weight_decay) > 0:
+            grouped_model_parameters.append(
+                {
+                    "params": params_no_need_weight_decay,
+                    "weight_decay": 0.0
+                }
+            )
+        return grouped_model_parameters
 
-    print(
-    DeepSpeedConfigBuilder.make_config_for_training(
-        128,
-        1,
-        2,
-        False,
-        False,
-        False,
-        return_dict=True,
-        tensorboard_save_path="test_path_1111",
-        enable_hybrid_engine=True
-    )
-    )
+    @classmethod
+    def get_optimizer(
+            cls,
+            model,
+            learning_rate,
+            offload,
+            weight_decay=0.0
+    ):
+        grouped_model_params = cls._get_optimizer_model_parameters_with_weight_decay(model, weight_decay)
+        optimizer_clz = DeepSpeedCPUAdam if offload else FusedAdam
+        optimizer = optimizer_clz(
+            grouped_model_params,
+            lr=learning_rate,
+            betas=(0.9, 0.95)
+        )
+        logger.info(f"Optimizer loaded: {optimizer}")
+        return optimizer
 
-    DeepSpeedConfigBuilder.make_config_for_eval(
-        32,
-        4,
-        3,
-        True,
-        True,
-        return_dict=False,
-    ).print_user_config()
+    @classmethod
+    def get_lr_scheduler(
+            cls,
+            scheduler_type,
+            optimizer,
+            num_warmup_steps=None,
+            num_training_steps=None,
+            scheduler_specific_kwargs=None,
+            lr_lambda=None
+    ):
+        if scheduler_type in SchedulerType.__members__.values():
+            return get_scheduler(
+                scheduler_type,
+                optimizer=optimizer,
+                num_warmup_steps=num_warmup_steps,
+                num_training_steps=num_training_steps,
+                scheduler_specific_kwargs=scheduler_specific_kwargs
+            )
+        else:
+            if scheduler_type == "wsd":
+                return get_wsd_scheduler(
+                    optimizer=optimizer,
+                    num_training_steps=num_training_steps,
+                    **scheduler_specific_kwargs
+                )
+            else:
+                assert lr_lambda is not None
+                return LambdaLR(optimizer, lr_lambda, -1)
 
-    print(
-    DeepSpeedConfigBuilder.make_config_for_eval(
-        128,
-        1,
-        2,
-        False,
-        False,
-        return_dict=True,
-    )
-    )
