@@ -11,7 +11,12 @@ t.load_tokenizer()
 if __name__ == '__main__':
 
     print(t)
+    print(t.tokenizer.default_chat_template)
+    print(t.tokenizer.apply_chat_template([{"role": "user", "content": "hello"}, {"role": "assistant", "content": "2hello"}, ], tokenize=False))
     sentence = "<|im_start|>test\nHello, world! This is a test sentence and should be long enough to be truncated.<|im_end|>"
+
+    # "<|im_start|>user\nhello<|im_end|>\n<|im_start|>assistant\nhello<|im_end|>"
+
     print(t.text_to_tensor(
         sentence,
         truncation_side="left",

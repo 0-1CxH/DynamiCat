@@ -1,0 +1,217 @@
+from deepspeed import DeepSpeedConfig
+
+
+class DeepSpeedConfigBuilder:
+
+    @classmethod
+    def _make_compulsory_training_config_of_zero_optimization(
+            cls,
+            zero_stage: int,
+            offload: bool
+    ):
+        offload_device = "cpu" if offload else "none"
+        return {
+            "stage": zero_stage,
+            "offload_param": {
+                "device": offload_device
+            },
+            "offload_optimizer": {
+                "device": offload_device
+            },
+            "reduce_bucket_size": 5e5,
+            "stage3_param_persistence_threshold": 1e4,
+            "stage3_max_live_parameters": 3e5,
+            "stage3_prefetch_bucket_size": 3e5,
+            "stage3_model_persistence_threshold": 3e5,
+            "memory_efficient_linear": False
+        }
+
+    @classmethod
+    def _make_compulsory_eval_config_of_zero_optimization(
+            cls,
+            zero_stage: int,
+            offload: bool
+    ):
+        offload_device = "cpu" if offload else "none"
+        return {
+            "stage": zero_stage,
+            "stage3_param_persistence_threshold": 1e4,
+            "offload_param": {
+                "device": offload_device
+            },
+            "memory_efficient_linear": False
+        }
+
+    @classmethod
+    def _make_compulsory_training_config_for_hybrid_engine(
+            cls,
+            enable_hybrid_engine=False,
+            inference_tp_size=1,
+            release_inference_cache=False,
+            pin_parameters=True,
+            tp_gather_partition_size=8,
+            max_out_tokens=512,
+            **kwargs
+
+    ):
+        return {
+            "enabled": enable_hybrid_engine,
+            "max_out_tokens": max_out_tokens,
+            "inference_tp_size": inference_tp_size,
+            "release_inference_cache": release_inference_cache,
+            "pin_parameters": pin_parameters,
+            "tp_gather_partition_size": tp_gather_partition_size,
+        }
+
+    @classmethod
+    def _make_optional_training_config_for_tensorboard(
+            cls,
+            enable_tensorboard = True,
+            tensorboard_save_path = ".",
+            job_name = "deepspeed_tensorboard", # will be sub folder in tensorboard_save_path
+            **kwargs
+    ):
+        return {
+            "tensorboard": {
+                "enabled": enable_tensorboard,
+                "output_path": tensorboard_save_path,
+                "job_name": job_name,
+                }
+        }
+
+    @classmethod
+    def _make_optional_config_for_fp16(cls, loss_scale_window=100, **kwargs):
+        return {
+            "fp16": {
+                "enabled": True,
+                "loss_scale_window": loss_scale_window,
+            }
+        }
+
+    @classmethod
+    def _make_optional_config_for_bf16(cls):
+        return {
+            "fp16": {
+                "enabled": False,
+            },
+            "bf16":{
+                "enabled": True
+            }
+        }
+
+    @classmethod
+    def make_config_for_training(
+            cls,
+            global_batch_size,
+            batch_size_per_gpu,
+            zero_stage,
+            zero_offload,
+            use_bf16,
+            use_tensorboard,
+            return_dict=True,
+            **kwargs
+
+    ):
+
+        result_config = {
+            "train_batch_size": global_batch_size,
+            "train_micro_batch_size_per_gpu": batch_size_per_gpu,
+            "steps_per_print": 10,
+            "gradient_clipping": 1.0,
+            "prescale_gradients": False,
+            "wall_clock_breakdown": False,
+            "zero_optimization": cls._make_compulsory_training_config_of_zero_optimization(zero_stage, zero_offload),
+            "hybrid_engine": cls._make_compulsory_training_config_for_hybrid_engine(**kwargs),
+        }
+        if use_bf16:
+            result_config.update(cls._make_optional_config_for_bf16())
+        else:
+            result_config.update(cls._make_optional_config_for_fp16(**kwargs))
+
+        if use_tensorboard:
+            result_config.update(cls._make_optional_training_config_for_tensorboard(**kwargs))
+
+        if return_dict:
+            return result_config
+        else:
+            return DeepSpeedConfig(result_config)
+
+    @classmethod
+    def make_config_for_eval(
+            cls,
+            global_batch_size,
+            batch_size_per_gpu,
+            zero_stage,
+            zero_offload,
+            use_bf16,
+            return_dict=True,
+            **kwargs
+    ):
+        result_config = {
+            "train_batch_size": global_batch_size,
+            "train_micro_batch_size_per_gpu": batch_size_per_gpu,
+            "steps_per_print": 10,
+            "gradient_clipping": 1.0,
+            "prescale_gradients": False,
+            "wall_clock_breakdown": False,
+            "zero_optimization": cls._make_compulsory_eval_config_of_zero_optimization(zero_stage, zero_offload),
+
+        }
+        if use_bf16:
+            result_config.update(cls._make_optional_config_for_bf16())
+        else:
+            result_config.update(cls._make_optional_config_for_fp16(**kwargs))
+
+        if return_dict:
+            return result_config
+        else:
+            return DeepSpeedConfig(result_config)
+
+
+
+
+if __name__ == '__main__':
+    DeepSpeedConfigBuilder.make_config_for_training(
+        32,
+        4,
+        3,
+        True,
+        True,
+        True,
+        return_dict=False,
+        tensorboard_save_path="test_path_0000"
+    ).print_user_config()
+
+    print(
+    DeepSpeedConfigBuilder.make_config_for_training(
+        128,
+        1,
+        2,
+        False,
+        False,
+        False,
+        return_dict=True,
+        tensorboard_save_path="test_path_1111",
+        enable_hybrid_engine=True
+    )
+    )
+
+    DeepSpeedConfigBuilder.make_config_for_eval(
+        32,
+        4,
+        3,
+        True,
+        True,
+        return_dict=False,
+    ).print_user_config()
+
+    print(
+    DeepSpeedConfigBuilder.make_config_for_eval(
+        128,
+        1,
+        2,
+        False,
+        False,
+        return_dict=True,
+    )
+    )
