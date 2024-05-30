@@ -1,7 +1,7 @@
 
 # DynamiCat
 
-Efficient LLM training pipeline with dynamic batch size, smart batching and dynamic padding that maximizes GPU memory utilization and training speed.
+Efficient LLM training/inference pipeline with dynamic batch size, smart batching and dynamic padding that maximizes GPU memory utilization, training speed and inference throughput.
 
 
 ![compare_loss_curve.png](img%2Fcompare_loss_curve.png)
@@ -42,6 +42,11 @@ pre-training, fine-tuning, inference
 | KeyFieldLengthDifferenceRestrictedTensorPlanner   | tensor planner for arranging data with key field length difference limit and batch size |
 | KeyFieldMaxLengthRestrictedTensorPlanner          | tensor planner for arranging data with key field max length limit and batch size        |
 | GeneralDataCollator                               | collate the planned tensors to form the batch                                           |
+| HFModelProvider                                   | load and save hf models                                                                 | 
+| DeepSpeedModelProvider                            | load and save deepspeed model                                                           |
+| utils                                             | including multi-processing, multi threads, traverse, mirror traverse tools              | 
+
+
 
 
 
@@ -57,12 +62,6 @@ train the model with the planned dataset
 
 Utils
 
-some useful functions
-
- MProcUtils
-
  RayDistUtils
-
- DeepSpeedUtils
 
 ...

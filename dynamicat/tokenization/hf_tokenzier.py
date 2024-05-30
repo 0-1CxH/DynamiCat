@@ -35,6 +35,11 @@ class GeneralDatasetHfTokenizer(GeneralDatasetTokenizer):
         logger.debug(f"{self}")
         return self.tokenizer
 
+    def save_tokenizer(self, save_folder):
+        os.makedirs(save_folder, exist_ok=True)
+        self.tokenizer.save_pretrained(save_folder)
+        logger.info(f"tokenizer {self.tokenizer} saved to {save_folder}")
+
     def __str__(self):
         if not self.tokenizer:
             return f"{__class__.__name__}(tokenizer_path={self.tokenizer_path})<Not Loaded>"
