@@ -74,14 +74,14 @@ class DeepSpeedConfigBuilder:
             cls,
             enable_tensorboard = True,
             tensorboard_save_path = ".",
-            job_name = "deepspeed_tensorboard", # will be sub folder in tensorboard_save_path
+            tensorboard_job_name = "deepspeed_tensorboard", # will be sub folder in tensorboard_save_path
             **kwargs
     ):
         return {
             "tensorboard": {
                 "enabled": enable_tensorboard,
                 "output_path": tensorboard_save_path,
-                "job_name": job_name,
+                "job_name": tensorboard_job_name,
                 }
         }
 
