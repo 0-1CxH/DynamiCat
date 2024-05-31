@@ -222,7 +222,8 @@ class DeepSpeedModelTrainingUtils:
             model,
             learning_rate,
             offload,
-            weight_decay=0.0
+            weight_decay=0.0,
+            **kwargs
     ):
         grouped_model_params = cls._get_optimizer_model_parameters_with_weight_decay(model, weight_decay)
         optimizer_clz = DeepSpeedCPUAdam if offload else FusedAdam
@@ -237,29 +238,31 @@ class DeepSpeedModelTrainingUtils:
     @classmethod
     def get_lr_scheduler(
             cls,
-            scheduler_type,
             optimizer,
+            scheduler_type,
             num_warmup_steps=None,
             num_training_steps=None,
             scheduler_specific_kwargs=None,
-            lr_lambda=None
+            lr_lambda=None,
+            **kwargs
     ):
         if scheduler_type in SchedulerType.__members__.values():
-            return get_scheduler(
+            scheduler = get_scheduler(
                 scheduler_type,
                 optimizer=optimizer,
                 num_warmup_steps=num_warmup_steps,
                 num_training_steps=num_training_steps,
                 scheduler_specific_kwargs=scheduler_specific_kwargs
             )
-        else:
-            if scheduler_type == "wsd":
-                return get_wsd_scheduler(
+        elif scheduler_type == "wsd":
+            scheduler = get_wsd_scheduler(
                     optimizer=optimizer,
                     num_training_steps=num_training_steps,
                     **scheduler_specific_kwargs
-                )
-            else:
-                assert lr_lambda is not None
-                return LambdaLR(optimizer, lr_lambda, -1)
+            )
+        else:
+            assert lr_lambda is not None
+            scheduler = LambdaLR(optimizer, lr_lambda, -1)
+        logger.info(f"LR Scheduler loaded: {scheduler}")
+        return scheduler
 
