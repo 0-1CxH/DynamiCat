@@ -24,6 +24,7 @@ m2 = GeneralDatasetMetadata({
 m3 = FileBaseDatasetMetadata({
     "dataset_name": "test_json_data",
     "field_names": ["prompt", "chosen"],
+    "loss_masked_field_names": ["chosen"],
     "max_seq_len": 4096,
     "field_max_lengths": [3072, None],
     "field_truncation_sides": ["left", "right"],
@@ -54,3 +55,4 @@ if __name__ == '__main__':
     for _ in [m, m2, m3, m4, m5, m6, m7]:
         print(_)
         print(_.get_field_count())
+        print(_.loss_masked_field_names)

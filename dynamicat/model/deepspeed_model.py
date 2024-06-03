@@ -33,9 +33,6 @@ class DeepSpeedHFModelProvider(DeepSpeedModelTrainingUtils, HFModelProvider):
 
         dist_env_enabled = cmd_args.local_rank != -1
 
-        if dist_env_enabled:
-            deepspeed.init_distributed()
-
 
         hf_model = super().load(
             hf_model_clz,

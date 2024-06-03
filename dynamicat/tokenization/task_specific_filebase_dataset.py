@@ -10,6 +10,7 @@ class DefaultTaskSpecificFileBaseDatasetMetadataFactory:
             sft_dataset_folder_path: str,
             sft_dataset_name = None,
             sft_field_names=None,
+            sft_loss_masked_field_names=None,
             sft_max_sequence_lengths=4096,
             sft_field_max_lengths=None,
             sft_field_truncation_sides=None,
@@ -23,10 +24,13 @@ class DefaultTaskSpecificFileBaseDatasetMetadataFactory:
             sft_field_max_lengths = [int(0.75*sft_max_sequence_lengths), None]
         if sft_field_truncation_sides is None:
             sft_field_truncation_sides = ["left", "right"]
+        if sft_loss_masked_field_names is None:
+            sft_loss_masked_field_names = ["prompt"]
 
         return FileBaseDatasetMetadata({
             "dataset_name": sft_dataset_name,
             "field_names": sft_field_names,
+            "loss_masked_field_names": sft_loss_masked_field_names,
             "max_seq_len": sft_max_sequence_lengths,
             "field_max_lengths": sft_field_max_lengths,
             "field_truncation_sides": sft_field_truncation_sides,

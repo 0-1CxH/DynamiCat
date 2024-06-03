@@ -13,6 +13,10 @@ class GeneralDataCollator:
         self.with_label = with_label
         self.padding_side = padding_side
 
+    def list_format_input_collate(self, tensor_plan_item_list):
+        assert len(tensor_plan_item_list) == 1
+        return self.collate(tensor_plan_item_list[0])
+
     def collate(self, tensor_plan_item: GeneralTensorPlanItem):
 
         all_input_ids = []
@@ -74,7 +78,7 @@ class GeneralDataCollator:
         return self.collate(tensor_plan_item)
 
     def __str__(self):
-        return f"{__class__.__name__}(fields_sequence={self.fields_sequence}, masked_fields={self.masked_fields}, padding_side={self.padding_side})"
+        return f"{__class__.__name__}(fields_sequence={self.fields_sequence}, masked_fields={self.loss_masked_fields}, padding_side={self.padding_side})"
 
     def __repr__(self):
         return self.__str__()

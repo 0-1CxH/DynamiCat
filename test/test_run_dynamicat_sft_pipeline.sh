@@ -10,4 +10,5 @@ deepspeed dynamicat/training/sft_pipeline.py \
   --zero_offload False \
   --use_bf16 \
   --learning_rate 1e-5 \
-  --use_tensorboard
+  --use_tensorboard \
+  --num_epochs 3

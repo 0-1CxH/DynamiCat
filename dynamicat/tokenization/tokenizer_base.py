@@ -14,6 +14,7 @@ class GeneralDatasetMetadata:
         self.dataset_name = dataset_metadata.get("dataset_name", "default_dataset")
         self.field_names = dataset_metadata.get("field_names")
         assert self.field_names, "field_names is required"
+        self.loss_masked_field_names = dataset_metadata.get("loss_masked_field_names", [])
         self.max_seq_len = dataset_metadata.get("max_seq_len") # None means no truncation
         self.field_max_lengths = dataset_metadata.get("field_max_lengths", [None] * len(self.field_names)) # None represents no truncation
         if None in self.field_max_lengths:

@@ -83,7 +83,7 @@ class FileBaseDataset(GeneralDatasetBase):
             tokenization_configs["field_max_length"] = field_max_length
             current_record_tensor[field] = text_to_tensor_func(record[field], **tokenization_configs)
             used_token_length += current_record_tensor[field].shape[1]
-            logger.debug(f"{field}, {tokenization_configs}, {used_token_length=}")
+            # logger.debug(f"{field}, {tokenization_configs}, {used_token_length=}")
         return current_record_tensor
 
     def tokenize_dataset_and_save_pt_file(self, text_to_tensor_func, save_path=None, use_mproc=True):

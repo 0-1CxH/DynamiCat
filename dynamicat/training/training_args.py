@@ -47,7 +47,7 @@ def parse_training_args():
     parser.add_argument('--learning_rate', type=float, help='Learning rate')
     parser.add_argument('--scheduler_type', type=str, help='Scheduler type', default="cosine")
     parser.add_argument('--num_warmup_steps', type=int, help='Number of warmup steps', default=0)
-    parser.add_argument('--num_training_steps', type=int, help='Number of training steps', default=100000)
+    # parser.add_argument('--num_training_steps', type=int, help='Number of training steps', default=100000)
 
     # tensorboard
     parser.add_argument('--use_tensorboard', action='store_true', help='Use tensorboard')
@@ -65,7 +65,8 @@ def parse_training_args():
     # flash attention
     parser.add_argument('--use_flash_attn', action='store_true', help='Use Flash Attention')
 
-
+    # training
+    parser.add_argument('--num_epochs', type=int, help='Number of epochs')
 
 
 
@@ -101,7 +102,7 @@ def pretty_print_args(parsed_cmd_args):
         f"\tglobal batch size: {parsed_cmd_args.global_batch_size}\n"
         f"\tbatch size per GPU: {parsed_cmd_args.batch_size_per_gpu}\n"
         f"\tworld size: {parsed_cmd_args.world_size}\n"
-        f"\taccumulation steps: {parsed_cmd_args.global_batch_size // (parsed_cmd_args.batch_size_per_gpu * parsed_cmd_args.world_size)}\n"
+        f"\taccumulation steps: {parsed_cmd_args.accumulation_steps}\n"
         f"DATASET CONFIG:\n"
         f"{dataset_args}"
         f"MODEL CONFIG:\n"
@@ -127,5 +128,7 @@ def pretty_print_args(parsed_cmd_args):
         f"\tuse tensorboard: {parsed_cmd_args.use_tensorboard}\n"
         f"\ttensorboard save path: {parsed_cmd_args.tensorboard_save_path}\n"
         f"\ttensorboard job name: {parsed_cmd_args.tensorboard_job_name}\n"
+        f"TRAINING CONFIG:\n"
+        f"\tnumber of epochs: {parsed_cmd_args.num_epochs}\n"
 
     )
