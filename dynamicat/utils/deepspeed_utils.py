@@ -3,7 +3,6 @@ from loguru import logger
 from torch.optim.lr_scheduler import LambdaLR
 from transformers import get_scheduler, SchedulerType
 from deepspeed.ops.adam import DeepSpeedCPUAdam, FusedAdam
-
 from dynamicat.utils.custom_lr_scheduler import get_wsd_scheduler
 
 
@@ -232,7 +231,7 @@ class DeepSpeedModelTrainingUtils:
             lr=learning_rate,
             betas=(0.9, 0.95)
         )
-        logger.info(f"Optimizer loaded: {optimizer}")
+        logger.debug(f"Optimizer loaded: {optimizer}")
         return optimizer
 
     @classmethod
@@ -263,6 +262,6 @@ class DeepSpeedModelTrainingUtils:
         else:
             assert lr_lambda is not None
             scheduler = LambdaLR(optimizer, lr_lambda, -1)
-        logger.info(f"LR Scheduler loaded: {scheduler}")
+        logger.debug(f"LR Scheduler loaded: {scheduler}")
         return scheduler
 

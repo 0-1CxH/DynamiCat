@@ -1,8 +1,5 @@
 import json
 import os.path
-
-from loguru import logger
-
 from dynamicat.tokenization.tokenizer_base import GeneralDatasetMetadata, GeneralDatasetBase
 from dynamicat.utils import traverse_files_with_suffix
 

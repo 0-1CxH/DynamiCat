@@ -1,10 +1,10 @@
 import argparse
-
 import deepspeed
 
 
 def parse_training_args():
     parser = argparse.ArgumentParser()
+
     # dist
     parser.add_argument('--local_rank', type=int, default=-1,
                         help='local rank passed from distributed launcher')
@@ -52,7 +52,7 @@ def parse_training_args():
     # tensorboard
     parser.add_argument('--use_tensorboard', action='store_true', help='Use tensorboard')
     parser.add_argument('--tensorboard_save_path', type=str, help='Path to save tensorboard logs', default='.')
-    parser.add_argument('--tensorboard_job_name', type=str, help='Tensorboard job name', default='deepspeed_tensorboard')
+    parser.add_argument('--tensorboard_job_name', type=str, help='Tensorboard job name', default='training_tensorboard')
 
     # hybrid engine
     parser.add_argument('--enable_hybrid_engine', action='store_true', help='Enable DeepSpeed hybrid engine')
@@ -68,6 +68,10 @@ def parse_training_args():
     # training
     parser.add_argument('--num_epochs', type=int, help='Number of epochs')
 
+    # save
+    parser.add_argument("--checkpoint_save_path", type=str)
+    parser.add_argument("--save_interval", type=int, default=200)
+
 
 
 
@@ -76,7 +80,7 @@ def parse_training_args():
     return cmd_args
 
 
-def pretty_print_args(parsed_cmd_args):
+def pretty_format_args(parsed_cmd_args):
     assert hasattr(parsed_cmd_args, 'world_size'), "Command line arguments should have world size"
 
     if parsed_cmd_args.dataset_metadata_path:
@@ -130,5 +134,9 @@ def pretty_print_args(parsed_cmd_args):
         f"\ttensorboard job name: {parsed_cmd_args.tensorboard_job_name}\n"
         f"TRAINING CONFIG:\n"
         f"\tnumber of epochs: {parsed_cmd_args.num_epochs}\n"
+        f"\tsteps per epoch: {parsed_cmd_args.num_training_steps // parsed_cmd_args.num_epochs}"
+        f"SAVE CONFIG:\n"
+        f"\tmodel save path: {parsed_cmd_args.checkpoint_save_path}"
+        f"\tsave each {parsed_cmd_args.save_interval} steps"
 
     )

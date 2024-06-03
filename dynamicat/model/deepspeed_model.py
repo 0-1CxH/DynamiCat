@@ -7,9 +7,6 @@ from dynamicat.model.hf_model import HFModelProvider
 from dynamicat.utils.deepspeed_utils import DeepSpeedModelTrainingUtils
 
 
-# def load deepspeed model
-
-
 
 class DeepSpeedHFModelProvider(DeepSpeedModelTrainingUtils, HFModelProvider):
 
@@ -84,7 +81,8 @@ class DeepSpeedHFModelProvider(DeepSpeedModelTrainingUtils, HFModelProvider):
     def _save_deepspeed_model_of_zero_stage_3(cls, model_to_save, save_folder, global_rank):
         model_to_save = model_to_save.module if hasattr(model_to_save, 'module') else model_to_save
         os.makedirs(save_folder, exist_ok=True)
-        logger.info(f"saving model {model_to_save} with config: {model_to_save.config} to {save_folder}")
+        if global_rank <= 0:
+            logger.info(f"saving model {model_to_save} with config: {model_to_save.config} to {save_folder}")
         # save config
         cls._save_config_file(model_to_save, save_folder)
         # save weights
@@ -100,11 +98,11 @@ class DeepSpeedHFModelProvider(DeepSpeedModelTrainingUtils, HFModelProvider):
                          parameter_to_save = parameters.data
             else:
                 parameter_to_save = parameters
-            if global_rank == 0:
+            if global_rank <= 0:
                 output_state_dict[param_name] = parameter_to_save.cpu()
                 # logger.debug(f"adding {param_name} with shape {parameter_to_save.shape}")
 
-        if global_rank == 0:
+        if global_rank <= 0:
             torch.save(output_state_dict, output_model_file)
             logger.info(f"saved model weights to {output_model_file}")
         del output_state_dict

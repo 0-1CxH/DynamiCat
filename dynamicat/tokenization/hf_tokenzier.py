@@ -1,7 +1,6 @@
 import os
 from loguru import logger
 from transformers import AutoTokenizer
-
 from dynamicat.tokenization.tokenizer_base import GeneralDatasetTokenizer
 
 

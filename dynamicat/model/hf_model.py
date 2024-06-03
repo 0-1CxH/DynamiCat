@@ -4,6 +4,7 @@ from transformers import AutoConfig
 from loguru import logger
 from dynamicat.tokenization.hf_tokenzier import GeneralDatasetHfTokenizer
 
+
 class HFModelProvider:
     @classmethod
     def load(

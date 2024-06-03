@@ -1,27 +1,33 @@
 import sys
 import os
-
-sys.path.append(
-    os.path.abspath(
-        os.path.join(
-            os.path.join(os.path.dirname(__file__), os.path.pardir), os.path.pardir
-        )
-    )
-)
-
-
 import torch
 import deepspeed
 import transformers
 from loguru import logger
 from torch.utils.data import DataLoader, SequentialSampler, DistributedSampler
+from torch.utils.tensorboard import SummaryWriter
+
+SOURCE_ROOT_ABS_PATH = os.path.abspath(
+        os.path.join(
+            os.path.join(os.path.dirname(__file__), os.path.pardir), os.path.pardir
+        )
+    )
+sys.path.append(SOURCE_ROOT_ABS_PATH)
+
+
+logger.info(f"adding {SOURCE_ROOT_ABS_PATH=} to python sys path")
+logger.info(f"{sys.path=}")
+
+
+
+from dynamicat.utils.common import print_rank_0, batch_dict_to_device, all_reduce_sum_of_tensor, set_random_seeds
 from dynamicat.model.deepspeed_model import DeepSpeedHFModelProvider
 from dynamicat.tensorplanning.tensor_planner import TensorPlannerFactory
 from dynamicat.tokenization.filebase_dataset import FileBaseDatasetMetadata, FileBaseDataset
 from dynamicat.tokenization.hf_tokenzier import GeneralDatasetHfTokenizer
 from dynamicat.collation.planned_data_collator import GeneralDataCollator
 from dynamicat.tokenization.task_specific_filebase_dataset import DefaultTaskSpecificFileBaseDatasetMetadataFactory
-from dynamicat.training.training_args import parse_training_args, pretty_print_args
+from dynamicat.training.training_args import parse_training_args, pretty_format_args
 from dynamicat.utils.deepspeed_utils import DeepSpeedConfigBuilder
 
 
@@ -29,6 +35,14 @@ def main():
     cmd_args = parse_training_args()
     logger.info(f"Command line arguments: {cmd_args}")
     dist_env_enabled = cmd_args.local_rank != -1
+
+    if not dist_env_enabled:
+        device = torch.device("cuda")
+    else:
+        torch.cuda.set_device(cmd_args.local_rank)
+        device = torch.device("cuda", cmd_args.local_rank)
+
+    set_random_seeds(42)
 
     if dist_env_enabled:
         deepspeed.init_distributed()
@@ -51,6 +65,7 @@ def main():
             sft_max_sequence_lengths=cmd_args.max_sequence_lengths,
             sft_file_format=cmd_args.dataset_file_format
         )
+        # TODO: add pt dataset here
 
     dataset = FileBaseDataset(dataset_metadata)
     dataset.load()
@@ -92,7 +107,6 @@ def main():
                 f"{num_training_steps_per_epoch} training steps per epoch, "
                 f"{cmd_args.num_training_steps} total training steps")
 
-    logger.info(pretty_print_args(cmd_args))
 
     # Load deepspeed configuration
     deepspeed_config = DeepSpeedConfigBuilder.make_config_for_training(
@@ -111,10 +125,74 @@ def main():
         **cmd_args.__dict__
     )
 
+    # Add tensorboard for loss
+    tensorboard_writer = None
+    if cmd_args.use_tensorboard:
+        tensorboard_writer = SummaryWriter(
+            log_dir=os.path.join(cmd_args.tensorboard_save_path, cmd_args.tensorboard_job_name),
+            flush_secs=15
+        )
+    logger.info(f"Tensorboard writer: {tensorboard_writer}")
+
+    # print check list before training starts
+    print_rank_0("CHECKLIST:")
+    print_rank_0(pretty_format_args(cmd_args))
 
 
-    for batch in data_loader:
-        break
+    # Start training loop
+    model.train()
+    for epoch in range(cmd_args.num_epochs):
+        print_rank_0(f"Epoch {epoch+1} of {cmd_args.num_epochs} started", cmd_args.global_rank)
+        for step, batch in enumerate(data_loader):
+            # step
+            batch = batch_dict_to_device(batch, device)
+            real_batch_size = batch['input_ids'].shape[0]
+            loss_normalization = real_batch_size / cmd_args.batch_size_per_gpu
+            outputs = model(
+                **batch,
+                use_cache=False
+            )
+            raw_loss = outputs.loss
+            normalized_loss = raw_loss * loss_normalization
+            logger.debug(f"Rank {cmd_args.global_rank}: "
+                         f"raw_loss={raw_loss.item()}, "
+                         f"real_batch_size={real_batch_size}, "
+                         f"normalized_loss={normalized_loss.item()}")
+            model.backward(normalized_loss)
+            model.step()
+
+            # log metrics
+            real_batch_size_tensor = torch.tensor(real_batch_size, device=device)
+            batch_size_sum_across_ranks = all_reduce_sum_of_tensor(real_batch_size_tensor).item()
+            normalized_loss_sum_across_ranks = all_reduce_sum_of_tensor(normalized_loss).item()
+            mean_loss_per_device = normalized_loss_sum_across_ranks / batch_size_sum_across_ranks * cmd_args.batch_size_per_gpu
+            print_rank_0(f"{epoch=}, {step=}: "
+                         f"batch size(sum)={batch_size_sum_across_ranks} "
+                         f"loss(mean)={mean_loss_per_device}", cmd_args.global_rank)
+            if tensorboard_writer:
+                if cmd_args.global_rank <= 0:
+                    global_step_count = epoch * num_training_steps_per_epoch + step
+                    tensorboard_writer.add_scalar("loss (mean)", mean_loss_per_device, global_step_count)
+                    tensorboard_writer.add_scalar("batch size (sum)", batch_size_sum_across_ranks, global_step_count)
+
+            if (step % cmd_args.save_interval == 0 and step > 0) or (epoch > 0 and step == 0):
+                print_rank_0(f"Saving model at {epoch=} {step=}", cmd_args.global_rank)
+                DeepSpeedHFModelProvider.save(
+                    model,
+                    os.path.join(cmd_args.checkpoint_save_path, f"checkpoint-ep{epoch}-step{step}"),
+                    global_rank=cmd_args.global_rank,
+                    is_zero_stage_3=cmd_args.zero_offload
+                )
+
+    # finish
+    print_rank_0(f"Saving final model", cmd_args.global_rank)
+    DeepSpeedHFModelProvider.save(
+        model,
+        os.path.join(cmd_args.checkpoint_save_path),
+        global_rank=cmd_args.global_rank,
+        is_zero_stage_3=cmd_args.zero_offload
+    )
+
 
 
 

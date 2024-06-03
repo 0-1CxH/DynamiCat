@@ -4,7 +4,6 @@ from dataclasses import dataclass
 
 import torch
 from loguru import logger
-
 from dynamicat.utils import mproc_map
 
 

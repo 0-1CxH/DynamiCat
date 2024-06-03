@@ -3,6 +3,7 @@ from abc import abstractmethod
 import torch
 from loguru import logger
 
+
 from dynamicat.tensorplanning.tensor_plan_base import (
     GeneralTensorPlan, GeneralTensorPlanItem,
     GPUMemoryRestrictedTensorPlanItem, GPUCountRestrictedTensorPlan,

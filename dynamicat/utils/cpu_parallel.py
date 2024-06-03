@@ -1,4 +1,3 @@
-import functools
 import multiprocessing
 from concurrent.futures import ThreadPoolExecutor
 from multiprocessing import cpu_count
