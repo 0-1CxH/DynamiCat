@@ -16,8 +16,9 @@ def parse_training_args():
     # dataset
     parser.add_argument('--dataset_metadata_path', type=str, help='Path to dataset metadata', default=None)
     parser.add_argument('--dataset_folder_path', type=str, help='Path to dataset folder', default=None)
+    parser.add_argument("--dataset_specific_task_type", type=str, default="sft")
     parser.add_argument('--max_sequence_lengths', type=int, help='Maximum sequence lengths', default=4096)
-    parser.add_argument('--dataset_file_format', type=str, help='Dataset file format', default='jsonl')
+    parser.add_argument('--dataset_file_format', type=str, help='Dataset file format')
 
     # tokenizer
     parser.add_argument('--tokenizer_path', type=str, help='Path to tokenizer')

@@ -4,6 +4,8 @@ import numpy as np
 from transformers import set_seed
 from loguru import logger
 
+from torch.distributed import ReduceOp
+
 
 
 def print_rank_0(msg, rank=0):
@@ -21,7 +23,11 @@ def batch_dict_to_device(batch, device):
     return output
 
 def all_reduce_sum_of_tensor(tensor):
-    torch.distributed.all_reduce(tensor, op=torch.distributed.ReduceOp.SUM)
+    torch.distributed.all_reduce(tensor, op=ReduceOp.SUM)
+    return tensor
+
+def all_reduce_mean_of_tensor(tensor):
+    torch.distributed.all_reduce(tensor, op=ReduceOp.AVG)
     return tensor
 
 def set_random_seeds(seed):

@@ -17,7 +17,7 @@ if __name__ == '__main__':
     collator2 = GeneralDataCollator(
         ["content"],
         [],
-        False
+        True
     )
     for plan_item in plan4.iterate_plan_items():
         batch = collator2.collate(plan_item)
