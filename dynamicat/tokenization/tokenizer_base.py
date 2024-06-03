@@ -1,3 +1,4 @@
+import json
 from abc import abstractmethod
 from dataclasses import dataclass
 
@@ -37,6 +38,10 @@ class GeneralDatasetMetadata:
 
     def get_field_count(self):
         return len(self.field_names)
+    @classmethod
+    def load_from_file(cls, file_path):
+        with open(file_path, "r") as f:
+            return cls(json.load(f))
 
     def __str__(self):
         return f"{__class__.__name__}({self.dataset_name=}), " + ", ".join([str(_) for _ in self.iterate_fields()])

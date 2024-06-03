@@ -51,7 +51,7 @@ class SmartBatchingMixIn:
 
 
 class FixedBatchSizeTensorPlanner(TensorPlannerBase, SmartBatchingMixIn):
-    def __init__(self, batch_size):
+    def __init__(self, batch_size, **kwargs):
         super().__init__("FixedBatchSize")
         self.batch_size = batch_size
 
@@ -71,7 +71,7 @@ class FixedBatchSizeTensorPlanner(TensorPlannerBase, SmartBatchingMixIn):
 
 
 class GPUMemoryRestrictedTensorPlanner(TensorPlannerBase, SmartBatchingMixIn):
-    def __init__(self, tensor_parameter_count_limit):
+    def __init__(self, tensor_parameter_count_limit, **kwargs):
         super().__init__("GPUMemoryRestricted")
         self.tensor_parameter_count_limit = tensor_parameter_count_limit
 
@@ -93,7 +93,7 @@ class GPUMemoryRestrictedTensorPlanner(TensorPlannerBase, SmartBatchingMixIn):
 
 
 class KeyFieldLengthDifferenceRestrictedTensorPlanner(TensorPlannerBase, SmartBatchingMixIn):
-    def __init__(self, max_token_diff, max_plan_size, primary_key):
+    def __init__(self, max_token_diff, max_plan_size, primary_key, **kwargs):
         super().__init__("LengthDifferenceRestricted")
         self.max_token_diff = max_token_diff
         self.max_plan_size = max_plan_size
@@ -120,7 +120,7 @@ class KeyFieldLengthDifferenceRestrictedTensorPlanner(TensorPlannerBase, SmartBa
 
 
 class KeyFieldMaxLengthRestrictedTensorPlanner(TensorPlannerBase, SmartBatchingMixIn):
-    def __init__(self, max_field_length, batch_size, primary_key):
+    def __init__(self, max_field_length, batch_size, primary_key, **kwargs):
         super().__init__("MaxLengthRestricted")
         self.max_field_length = max_field_length
         self.batch_size = batch_size

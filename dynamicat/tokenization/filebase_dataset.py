@@ -27,6 +27,11 @@ class FileBaseDatasetMetadata(GeneralDatasetMetadata):
         return (f"{__class__.__name__}({self.dataset_name=}<format={self.file_format}, folder_path={self.folder_path}>)" +
                 ", ".join([str(_) for _ in self.iterate_fields()]))
 
+    @classmethod
+    def load_from_file(cls, file_path):
+        with open(file_path, "r") as f:
+            return cls(json.load(f))
+
 
 class FileBaseDataset(GeneralDatasetBase):
 
