@@ -1,0 +1,10 @@
+{
+    "dataset_name": "test_jsonl_data",
+    "field_names": ["prompt", "chosen"],
+    "loss_masked_field_names": ["chosen"],
+    "max_seq_len": 4096,
+    "field_max_lengths": [3072, null],
+    "field_truncation_sides": ["left", "right"],
+    "file_format": "jsonl",
+    "folder_path": "test/test_jsonl_data"
+}

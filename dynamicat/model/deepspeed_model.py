@@ -39,8 +39,12 @@ class DeepSpeedHFModelProvider(DeepSpeedModelTrainingUtils, HFModelProvider):
             disable_dropout,
         )
 
+        input("end of hf_model")
+
         optimizer = cls.get_optimizer(hf_model, **kwargs)
         lr_scheduler = cls.get_lr_scheduler(optimizer, **kwargs)
+
+        input("end of optimizer")
 
 
         if dist_env_enabled:

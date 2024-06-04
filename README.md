@@ -22,8 +22,35 @@ Experiment environment:
 TODO: test with more public datasets and models to replace this table 
 
 
+
 # support
 pre-training, fine-tuning, inference
+
+
+# Quick Start
+
+## Step 1: Tokenization
+
+```bash
+bash scripts/tokenize/run_tokenize_default_sft.sh -i  test/test_jsonl_data -t test/test_tokenizer/
+bash scripts/tokenize/run_tokenize_default_pt.sh -i test/test_txt_data -t test/test_tokenizer/
+bash scripts/tokenize/run_tokenize_by_metadata_file.sh -i test/test_metadata_file.json -t test/test_tokenizer/
+```
+## Step 2: Tensor Planning
+
+```bash
+# Fixed batch size (smart batching enabled/ disabled)
+bash scripts/plan/run_plan_fixed_batch_size.sh -i test/test_jsonl_data.pt -b 4 -s 1
+bash scripts/plan/run_plan_fixed_batch_size.sh -i test/test_jsonl_data.pt -b 4
+# GPU memory restricted
+bash scripts/plan/run_plan_gpu_mem.sh -i test/test_jsonl_data.pt -c 1500
+bash scripts/plan/run_plan_gpu_mem.sh -i test/test_jsonl_data.pt -c 15000 -r [plan_order_type, options are: bs_asc, bs_desc, pc_asc, pc_desc, random, none]
+# Key field length difference restricted
+bash scripts/plan/run_plan_length_diff.sh -i test/test_jsonl_data.pt -d 10 -b 4
+```
+
+
+
 
 
 # modules documentation

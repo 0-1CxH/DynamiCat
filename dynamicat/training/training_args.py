@@ -38,7 +38,7 @@ def parse_training_args():
 
     # zero
     parser.add_argument('--zero_stage', type=int, help='DeepSpeed ZERO stage, should be 0, 1, 2, or 3')
-    parser.add_argument('--zero_offload', type=bool, help='DeepSpeed ZERO offload', default=True)
+    parser.add_argument('--zero_offload', action='store_true', help='DeepSpeed ZERO offload')
 
     # fp16 or bf16
     parser.add_argument('--use_bf16', action='store_true', help='Use BFLOAT16 precision')

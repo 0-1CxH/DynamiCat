@@ -2,7 +2,7 @@ from abc import abstractmethod
 
 import torch
 from loguru import logger
-
+import random
 
 from dynamicat.tensorplanning.tensor_plan_base import (
     GeneralTensorPlan, GeneralTensorPlanItem,
@@ -79,7 +79,7 @@ class GPUMemoryRestrictedTensorPlanner(TensorPlannerBase, SmartBatchingMixIn):
     def __str__(self):
         return f"{__class__.__name__}(tensor_parameter_count_limit={self.tensor_parameter_count_limit})"
 
-    def plan_tensor_records(self, tensor_records):
+    def plan_tensor_records(self, tensor_records, plan_order_type=None):
         tensor_plan = GPUCountRestrictedTensorPlan()
         tensor_records = self.exec_smart_batching(tensor_records)
         current_tensor_plan_item = GPUMemoryRestrictedTensorPlanItem()
@@ -90,6 +90,19 @@ class GPUMemoryRestrictedTensorPlanner(TensorPlannerBase, SmartBatchingMixIn):
         if current_tensor_plan_item:
             tensor_plan.add_tensor_plan_item(current_tensor_plan_item)
         logger.info(tensor_plan.get_plan_items_stats())
+        if plan_order_type == "bs_asc":
+            tensor_plan.tensor_plan_items.sort(key=lambda x: len(x))
+        elif plan_order_type == "bs_desc":
+            tensor_plan.tensor_plan_items.sort(key=lambda x: len(x), reverse=True)
+        elif plan_order_type == "pc_asc":
+            tensor_plan.tensor_plan_items.sort(key=lambda x: x.get_tensor_parameter_count_after_padding())
+        elif plan_order_type == "pc_desc":
+            tensor_plan.tensor_plan_items.sort(key=lambda x: x.get_tensor_parameter_count_after_padding(), reverse=True)
+        elif plan_order_type == "random":
+            random.shuffle(tensor_plan.tensor_plan_items)
+        else:
+            pass
+
         return tensor_plan
 
 
