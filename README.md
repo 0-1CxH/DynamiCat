@@ -27,7 +27,7 @@ TODO: test with more public datasets and models to replace this table
 pre-training, fine-tuning, inference
 
 
-# Quick Start
+# Test Cases
 
 ## Step 1: Tokenization
 
@@ -46,10 +46,41 @@ bash scripts/plan/run_plan_fixed_batch_size.sh -i test/test_jsonl_data.pt -b 4
 bash scripts/plan/run_plan_gpu_mem.sh -i test/test_jsonl_data.pt -c 1500
 bash scripts/plan/run_plan_gpu_mem.sh -i test/test_jsonl_data.pt -c 15000 -r [plan_order_type, options are: bs_asc, bs_desc, pc_asc, pc_desc, random, none]
 # Key field length difference restricted
-bash scripts/plan/run_plan_length_diff.sh -i test/test_jsonl_data.pt -d 10 -b 4
+bash scripts/plan/run_plan_length_diff.sh -i test/test_jsonl_data.pt -k prompt -d 10 -b 8
+# Key field max length restricted (smart batching enabled/ disabled)
+bash scripts/plan/run_plan_max_length.sh -i test/test_txt_data.pt -k content -m 100 -b 8 -s 1
+bash scripts/plan/run_plan_max_length.sh -i test/test_txt_data.pt -k content -m 100 -b 8
 ```
 
+## Step 3: Training
 
+```bash
+deepspeed dynamicat/training/training_pipeline.py \
+  --global_batch_size 32 \
+  --batch_size_per_gpu 4 \
+  --planned_tensor_file_path test/test_jsonl_data_GPUMemoryRestricted_15000.pt \
+  --dataset_specific_task_type sft \
+  --model_path test/test_model \
+  --zero_stage 3 \
+  --use_bf16 \
+  --learning_rate 1e-5 \
+  --use_tensorboard \
+  --num_epochs 3 \
+  --checkpoint_save_path test/test_model_save_ds_train
+ 
+deepspeed dynamicat/training/training_pipeline.py \
+  --global_batch_size 32 \
+  --batch_size_per_gpu 4 \
+  --planned_tensor_file_path test/test_txt_data_MaxLength_100_BatchSize_8.pt \
+  --dataset_specific_task_type pt \
+  --model_path test/test_model \
+  --zero_stage 3 \
+  --use_bf16 \
+  --learning_rate 1e-5 \
+  --use_tensorboard \
+  --num_epochs 3 \
+  --checkpoint_save_path test/test_model_save_ds_train_pt
+```
 
 
 

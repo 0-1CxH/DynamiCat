@@ -10,8 +10,6 @@ from loguru import logger
 from torch.utils.data import DataLoader, SequentialSampler, DistributedSampler
 from torch.utils.tensorboard import SummaryWriter
 
-
-
 SOURCE_ROOT_ABS_PATH = os.path.abspath(
         os.path.join(
             os.path.join(os.path.dirname(__file__), os.path.pardir), os.path.pardir
@@ -27,72 +25,92 @@ logger.info(f"{sys.path=}")
 
 from dynamicat.utils.common import print_rank_0, batch_dict_to_device, all_reduce_sum_of_tensor, all_reduce_mean_of_tensor, set_random_seeds
 from dynamicat.model.deepspeed_model import DeepSpeedHFModelProvider
-from dynamicat.tokenization.filebase_dataset import FileBaseDatasetMetadata
+from dynamicat.tensorplanning.tensor_planner import TensorPlannerFactory
+from dynamicat.tokenization.filebase_dataset import FileBaseDatasetMetadata, FileBaseDataset
+from dynamicat.tokenization.hf_tokenzier import GeneralDatasetHfTokenizer
 from dynamicat.collation.planned_data_collator import GeneralDataCollator
+from dynamicat.tokenization.task_specific_filebase_dataset import DefaultTaskSpecificFileBaseDatasetMetadataFactory
 from dynamicat.training.training_args import parse_training_args, pretty_format_args
-from dynamicat.utils.deepspeed_utils import DeepSpeedConfigBuilder, DeepSpeedModelTrainingUtils
-from dynamicat.model.hf_model import HFModelProvider
-from dynamicat.utils.performance_metrics import ThroughputMetrics
+from dynamicat.utils.deepspeed_utils import DeepSpeedConfigBuilder
+
 
 def main():
     cmd_args = parse_training_args()
     logger.info(f"Command line arguments: {cmd_args}")
 
+    input("end of cmd_args")
+
     dist_env_enabled = cmd_args.local_rank != -1
 
-    if dist_env_enabled:
+    if not dist_env_enabled:
+        device = torch.device("cuda")
+    else:
         torch.cuda.set_device(cmd_args.local_rank)
         device = torch.device("cuda", cmd_args.local_rank)
-        deepspeed.init_distributed()
-        cmd_args.global_rank = torch.distributed.get_rank()
-        cmd_args.world_size = torch.distributed.get_world_size()
-
-    else:
-        device = torch.device("cuda")
-        cmd_args.global_rank = -1
-        cmd_args.world_size = 1
-
-
-    cmd_args.accumulation_steps = cmd_args.global_batch_size // (cmd_args.batch_size_per_gpu * cmd_args.world_size)
-    assert cmd_args.accumulation_steps > 0 and cmd_args.batch_size_per_gpu * cmd_args.world_size * cmd_args.accumulation_steps == cmd_args.global_batch_size, "invalid accumulation step config"
-
-    # Load deepspeed configuration
-    deepspeed_config = DeepSpeedConfigBuilder.make_config_for_training(
-        return_dict=True,
-        **cmd_args.__dict__
-    )
-    logger.info(f"DeepSpeed configuration: {deepspeed_config}")
 
     set_random_seeds(42)
 
     if dist_env_enabled:
-        torch.distributed.barrier()
+        deepspeed.init_distributed()
 
-    # load planned tensor file
-    tensor_plan = torch.load(cmd_args.planned_tensor_file_path)
+    cmd_args.global_rank = torch.distributed.get_rank() if dist_env_enabled else -1
+    cmd_args.world_size = torch.distributed.get_world_size() if dist_env_enabled else 1
+    cmd_args.accumulation_steps = cmd_args.global_batch_size // (cmd_args.batch_size_per_gpu * cmd_args.world_size)
+    assert cmd_args.accumulation_steps > 0 and cmd_args.batch_size_per_gpu * cmd_args.world_size * cmd_args.accumulation_steps == cmd_args.global_batch_size, "invalid accumulation step config"
 
-    # Load dataset metadata
+
+    # Load tokenizer
+    tokenizer = GeneralDatasetHfTokenizer(cmd_args.tokenizer_path)
+    tokenizer.load_tokenizer()
+
+    # Load dataset
     if cmd_args.dataset_metadata_path:
-        dataset_metadata = FileBaseDatasetMetadata.load_from_file(cmd_args.dataset_metadata_path)
-        field_names_to_use = dataset_metadata.field_names
-        loss_masked_field_names_to_use = dataset_metadata.loss_masked_field_names
+        dataset_metadata =  FileBaseDatasetMetadata.load_from_file(cmd_args.dataset_metadata_path)
     else:
-        if cmd_args.dataset_specific_task_type == "sft":
-            field_names_to_use = ["prompt", "chosen"]
-            loss_masked_field_names_to_use = ["prompt"]
-        elif cmd_args.dataset_specific_task_type == "pt":
-            field_names_to_use = ["content"]
-            loss_masked_field_names_to_use = []
-        else:
-            raise ValueError(f"Unknown dataset specific task type: {cmd_args.dataset_specific_task_type}")
+        assert cmd_args.dataset_folder_path, "dataset_folder_path is required"
+        if cmd_args.dataset_specific_task_type == "pt":
+            dataset_metadata = DefaultTaskSpecificFileBaseDatasetMetadataFactory.make_pretrain_metadata(
+                pretrain_dataset_folder_path=cmd_args.dataset_folder_path,
+                pretrain_max_sequence_lengths=cmd_args.max_sequence_lengths,
+                pretrain_file_format=cmd_args.dataset_file_format
+            )
+        else: # default to sft
+            dataset_metadata = DefaultTaskSpecificFileBaseDatasetMetadataFactory.make_sft_metadata(
+                sft_dataset_folder_path=cmd_args.dataset_folder_path,
+                sft_max_sequence_lengths=cmd_args.max_sequence_lengths,
+                sft_file_format=cmd_args.dataset_file_format
+            )
 
-    logger.info(f"field_names_to_use: {field_names_to_use}, loss_masked_field_names_to_use: {loss_masked_field_names_to_use}")
+        # TODO: add pt dataset here
+
+    dataset = FileBaseDataset(dataset_metadata)
+    dataset.load()
+    logger.info(f"Dataset {dataset_metadata} loaded successfully, {len(dataset)} records")
+    tokenized_tensors_generator = dataset.dataset_to_tensors(tokenizer.text_to_tensor)
+    tokenized_tensors = list(tokenized_tensors_generator)
+
+    # Load tensor planner
+    tensor_planner = TensorPlannerFactory.create_tensor_planner(
+        plan_type=cmd_args.tensor_planner_type,
+        batch_size=cmd_args.batch_size_per_gpu,
+        tensor_parameter_count_limit=cmd_args.tensor_parameter_count_limit,
+        primary_key=cmd_args.primary_key,
+        max_token_diff=cmd_args.max_token_diff,
+        max_plan_size=cmd_args.batch_size_per_gpu,
+        max_field_length=cmd_args.max_sequence_lengths
+    )
+    tensor_plan = tensor_planner.plan_tensor_records(tokenized_tensors)
+    logger.debug(tensor_plan.formatted_string_of_whole_plan())
+    logger.info(f"Tensor plan loaded successfully, {len(tensor_plan)} records")
+
     # Load data collator & data loader for training
     collator = GeneralDataCollator(
-        field_names_to_use,
-        loss_masked_field_names_to_use,
+        dataset_metadata.field_names,
+        dataset_metadata.loss_masked_field_names,
         True
     )
+    logger.info(f"Data collator loaded: {collator}")
+
     data_loader = DataLoader(
         dataset=tensor_plan,
         batch_size=1,
@@ -106,42 +124,24 @@ def main():
                 f"{cmd_args.num_training_steps} total training steps")
 
 
+    # Load deepspeed configuration
+    deepspeed_config = DeepSpeedConfigBuilder.make_config_for_training(
+        return_dict=True,
+        **cmd_args.__dict__
+    )
+    logger.info(f"DeepSpeed configuration: {deepspeed_config}")
+
     # Load model
-    hf_model = HFModelProvider.load(
+    model = DeepSpeedHFModelProvider.load(
         hf_model_clz=getattr(transformers, cmd_args.model_clz),
         model_name_or_path=cmd_args.model_path,
-        evaluation=False,
-        use_flash_attn=cmd_args.use_flash_attn,
-    )
-
-    optimizer = DeepSpeedModelTrainingUtils.get_optimizer(
-        hf_model,
-        learning_rate=cmd_args.learning_rate,
+        cmd_args=cmd_args,
+        ds_config=deepspeed_config,
         offload=cmd_args.zero_offload,
-    )
-    lr_scheduler = DeepSpeedModelTrainingUtils.get_lr_scheduler(
-        optimizer,
-        scheduler_type=cmd_args.scheduler_type,
-        num_warmup_steps=cmd_args.num_warmup_steps,
-        num_training_steps=cmd_args.num_training_steps
+        **cmd_args.__dict__
     )
 
-    model, optimizer, _, lr_scheduler = deepspeed.initialize(
-        model=hf_model,
-        optimizer=optimizer,
-        args=cmd_args,
-        config=deepspeed_config,
-        lr_scheduler=lr_scheduler,
-        dist_init_required=True
-    )
-    logger.info(f"DeepSpeed model loaded successfully, {model=}, {optimizer=}, {lr_scheduler=}")
-
-    # Need this to reduce the memory consumption
-    model.gradient_checkpointing_enable()
-
-    tpt_metric = ThroughputMetrics(model.model, True)
-    logger.info(f"ThroughputMetrics loaded successfully, {tpt_metric=}, model params={tpt_metric.model_params_count}")
-
+    input("end of model")
 
     # Add tensorboard for loss
     tensorboard_writer = None
@@ -156,6 +156,8 @@ def main():
     print_rank_0("CHECKLIST:")
     print_rank_0(pretty_format_args(cmd_args))
 
+    input("end of checklist")
+
 
     # Start training loop
     model.train()
@@ -166,7 +168,6 @@ def main():
             step_start_time = time.time()
             batch = batch_dict_to_device(batch, device)
             real_batch_size = batch['input_ids'].shape[0]
-            real_seq_length = batch['input_ids'].shape[1]
             loss_normalization = real_batch_size / cmd_args.batch_size_per_gpu
             outputs = model(
                 **batch,
@@ -178,42 +179,28 @@ def main():
             model.step()
             step_stop_time = time.time()
             step_end_to_end_time = step_stop_time - step_start_time
-            tflops = tpt_metric.get_throughput(step_end_to_end_time, real_batch_size, real_seq_length)
             logger.debug(f"Rank {cmd_args.global_rank}: "
                          f"raw_loss={raw_loss.item()}, "
                          f"real_batch_size={real_batch_size}, "
                          f"normalized_loss={normalized_loss.item()},"
-                         f"time_used={step_end_to_end_time},"
-                         f"tflops={tflops:.4f}")
+                         f"time_used={step_end_to_end_time}")
 
             # log metrics
+            step_end_to_end_time_tensor = torch.tensor(step_end_to_end_time, device=device)
+            mean_step_end_to_end_time_across_ranks = all_reduce_mean_of_tensor(step_end_to_end_time_tensor).item()
             real_batch_size_tensor = torch.tensor(real_batch_size, device=device)
             batch_size_sum_across_ranks = all_reduce_sum_of_tensor(real_batch_size_tensor).item()
             normalized_loss_sum_across_ranks = all_reduce_sum_of_tensor(normalized_loss).item()
             mean_loss_per_device = normalized_loss_sum_across_ranks / batch_size_sum_across_ranks * cmd_args.batch_size_per_gpu
-
-            step_end_to_end_time_tensor = torch.tensor(step_end_to_end_time, device=device)
-            mean_step_end_to_end_time_across_ranks = all_reduce_mean_of_tensor(step_end_to_end_time_tensor).item()
-            mean_sample_per_second = batch_size_sum_across_ranks / mean_step_end_to_end_time_across_ranks
-
-            tflops_tensor = torch.tensor(tflops, device=device)
-            mean_tflops_across_ranks = all_reduce_mean_of_tensor(tflops_tensor).item()
-
-
-            print_rank_0(f"{epoch=}, {step=}: time used(mean)={mean_step_end_to_end_time_across_ranks:.3f} "
+            print_rank_0(f"{epoch=}, {step=}: time used (mean)={mean_step_end_to_end_time_across_ranks:.3f} "
                          f"batch size(sum)={batch_size_sum_across_ranks} "
-                         f"loss(mean)={mean_loss_per_device} "
-                         f"samples per second(sum)={mean_sample_per_second} "
-                         f"tflops(mean)={mean_tflops_across_ranks:.4f}",
-                         cmd_args.global_rank)
+                         f"loss(mean)={mean_loss_per_device}", cmd_args.global_rank)
             if tensorboard_writer:
                 if cmd_args.global_rank <= 0:
                     global_step_count = epoch * num_training_steps_per_epoch + step
                     tensorboard_writer.add_scalar("loss (mean)", mean_loss_per_device, global_step_count)
                     tensorboard_writer.add_scalar("batch size (sum)", batch_size_sum_across_ranks, global_step_count)
                     tensorboard_writer.add_scalar("time (mean)", mean_step_end_to_end_time_across_ranks, global_step_count)
-                    tensorboard_writer.add_scalar("samples per sec (mean)", mean_sample_per_second, global_step_count)
-                    tensorboard_writer.add_scalar("tflops (mean)", mean_tflops_across_ranks, global_step_count)
 
             if (step % cmd_args.save_interval == 0 and step > 0) or (epoch > 0 and step == 0):
                 print_rank_0(f"Saving model at {epoch=} {step=}", cmd_args.global_rank)

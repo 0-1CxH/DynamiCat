@@ -1,16 +1,10 @@
 deepspeed dynamicat/training/training_pipeline.py \
   --global_batch_size 32 \
   --batch_size_per_gpu 4 \
-  --dataset_folder_path test/test_jsonl_data \
-  --max_sequence_lengths 256 \
+  --planned_tensor_file_path test/test_jsonl_data_GPUMemoryRestricted_15000.pt \
   --dataset_specific_task_type sft \
-  --dataset_file_format jsonl \
-  --tokenizer_path test/test_tokenizer \
-  --tensor_planner_type "GPUMemoryRestricted" \
-  --tensor_parameter_count_limit 550 \
   --model_path test/test_model \
   --zero_stage 3 \
-  --zero_offload True \
   --use_bf16 \
   --learning_rate 1e-5 \
   --use_tensorboard \

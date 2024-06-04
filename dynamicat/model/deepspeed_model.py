@@ -4,63 +4,10 @@ import deepspeed
 from loguru import logger
 from deepspeed.runtime.zero.partition_parameters import ZeroParamStatus
 from dynamicat.model.hf_model import HFModelProvider
-from dynamicat.utils.deepspeed_utils import DeepSpeedModelTrainingUtils
 
 
 
-class DeepSpeedHFModelProvider(DeepSpeedModelTrainingUtils, HFModelProvider):
-
-    @classmethod
-    def load(
-            cls,
-            hf_model_clz,
-            model_name_or_path,
-            evaluation=False,
-            use_flash_attn=False,
-            disable_dropout=False,
-            cmd_args=None,
-            ds_config=None,
-            **kwargs
-    ):
-
-        assert cmd_args is not None, "Command line arguments should not be None"
-        assert ds_config is not None, "DeepSpeed Config should not be None"
-
-        assert hasattr(cmd_args, "local_rank"), "Command line arguments should have local rank"
-
-        dist_env_enabled = cmd_args.local_rank != -1
-
-
-        hf_model = super().load(
-            hf_model_clz,
-            model_name_or_path,
-            evaluation,
-            use_flash_attn,
-            disable_dropout,
-        )
-
-        input("end of hf_model")
-
-        optimizer = cls.get_optimizer(hf_model, **kwargs)
-        lr_scheduler = cls.get_lr_scheduler(optimizer, **kwargs)
-
-        input("end of optimizer")
-
-
-        if dist_env_enabled:
-            torch.distributed.barrier()
-
-        deepspeed_model_engine, optimizer, _, lr_scheduler = deepspeed.initialize(
-            model=hf_model,
-            optimizer=optimizer,
-            args=cmd_args,
-            config=ds_config,
-            lr_scheduler=lr_scheduler,
-            dist_init_required=True)
-
-        logger.info(f"DeepSpeed model loaded successfully, {deepspeed_model_engine=}, {optimizer=}, {lr_scheduler=}")
-
-        return deepspeed_model_engine
+class DeepSpeedHFModelProvider(HFModelProvider):
 
     @classmethod
     def save(cls, model_to_save, save_folder, global_rank=None, is_zero_stage_3=None):

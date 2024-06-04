@@ -222,7 +222,6 @@ class DeepSpeedModelTrainingUtils:
             learning_rate,
             offload,
             weight_decay=0.0,
-            **kwargs
     ):
         grouped_model_params = cls._get_optimizer_model_parameters_with_weight_decay(model, weight_decay)
         optimizer_clz = DeepSpeedCPUAdam if offload else FusedAdam
@@ -243,7 +242,6 @@ class DeepSpeedModelTrainingUtils:
             num_training_steps=None,
             scheduler_specific_kwargs=None,
             lr_lambda=None,
-            **kwargs
     ):
         if scheduler_type in SchedulerType.__members__.values():
             scheduler = get_scheduler(
