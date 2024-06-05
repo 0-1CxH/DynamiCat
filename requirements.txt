@@ -1,2 +1,6 @@
 torch
 deepspeed
+transformers
+sentencepiece
+loguru
+tensorboard

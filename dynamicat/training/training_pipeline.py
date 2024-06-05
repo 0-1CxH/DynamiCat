@@ -33,6 +33,7 @@ from dynamicat.training.training_args import parse_training_args, pretty_format_
 from dynamicat.utils.deepspeed_utils import DeepSpeedConfigBuilder, DeepSpeedModelTrainingUtils
 from dynamicat.model.hf_model import HFModelProvider
 from dynamicat.utils.performance_metrics import ThroughputMetrics
+from dynamicat.tokenization.hf_tokenzier import GeneralDatasetHfTokenizer
 
 def main():
     cmd_args = parse_training_args()
@@ -139,8 +140,10 @@ def main():
     # Need this to reduce the memory consumption
     model.gradient_checkpointing_enable()
 
-    tpt_metric = ThroughputMetrics(model.model, True)
-    logger.info(f"ThroughputMetrics loaded successfully, {tpt_metric=}, model params={tpt_metric.model_params_count}")
+    tokenizer = GeneralDatasetHfTokenizer(cmd_args.model_path)
+    tpt_metric = ThroughputMetrics(model.model, tokenizer.load_tokenizer(), True)
+    logger.info(f"ThroughputMetrics loaded successfully, {tpt_metric=}, model params={tpt_metric.model_param_count}")
+    del tokenizer
 
 
     # Add tensorboard for loss

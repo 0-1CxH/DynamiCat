@@ -56,6 +56,7 @@ def plan_tensor(cmd_args):
 
     logger.debug(tensor_plan.formatted_string_of_whole_plan())
     logger.info(f"Tensor planned successfully, {len(tensor_plan)} plan items")
+    logger.info(f"Tensor plan stats: {tensor_plan.get_plan_items_stats()}")
     torch.save(tensor_plan, cmd_args.output_path)
     logger.info(f"Tensor plan saved to {cmd_args.output_path}")
 
