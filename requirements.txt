@@ -4,3 +4,5 @@ transformers
 sentencepiece
 loguru
 tensorboard
+calflops
+pynvml

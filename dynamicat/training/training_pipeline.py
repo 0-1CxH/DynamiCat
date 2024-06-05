@@ -32,7 +32,7 @@ from dynamicat.collation.planned_data_collator import GeneralDataCollator
 from dynamicat.training.training_args import parse_training_args, pretty_format_args
 from dynamicat.utils.deepspeed_utils import DeepSpeedConfigBuilder, DeepSpeedModelTrainingUtils
 from dynamicat.model.hf_model import HFModelProvider
-from dynamicat.utils.performance_metrics import ThroughputMetrics
+from dynamicat.utils.performance_metrics import ThroughputMetrics, GPUUtilizationMetrics
 from dynamicat.tokenization.hf_tokenzier import GeneralDatasetHfTokenizer
 
 def main():
@@ -140,10 +140,14 @@ def main():
     # Need this to reduce the memory consumption
     model.gradient_checkpointing_enable()
 
+    # Load metrics
     tokenizer = GeneralDatasetHfTokenizer(cmd_args.model_path)
     tpt_metric = ThroughputMetrics(model.model, tokenizer.load_tokenizer(), True)
     logger.info(f"ThroughputMetrics loaded successfully, {tpt_metric=}, model params={tpt_metric.model_param_count}")
     del tokenizer
+
+    gpu_metric = GPUUtilizationMetrics()
+    logger.info(f"GPUUtilizationMetrics loaded successfully, {gpu_metric.device_handles=}")
 
 
     # Add tensorboard for loss
@@ -156,8 +160,8 @@ def main():
     logger.info(f"Tensorboard writer: {tensorboard_writer}")
 
     # print check list before training starts
-    print_rank_0("CHECKLIST:")
-    print_rank_0(pretty_format_args(cmd_args))
+    print_rank_0("ARG CHECKLIST:", cmd_args.global_rank)
+    print_rank_0(pretty_format_args(cmd_args), cmd_args.global_rank)
 
 
     # Start training loop
@@ -203,10 +207,10 @@ def main():
             mean_tflops_across_ranks = all_reduce_mean_of_tensor(tflops_tensor).item()
 
 
-            print_rank_0(f"{epoch=}, {step=}: time used(mean)={mean_step_end_to_end_time_across_ranks:.3f} "
+            print_rank_0(f"{epoch=}, {step=}: time used(mean)={mean_step_end_to_end_time_across_ranks:.4f} "
                          f"batch size(sum)={batch_size_sum_across_ranks} "
-                         f"loss(mean)={mean_loss_per_device} "
-                         f"samples per second(sum)={mean_sample_per_second} "
+                         f"loss(mean)={mean_loss_per_device:.4f} "
+                         f"samples per second(sum)={mean_sample_per_second:.3f} "
                          f"tflops(mean)={mean_tflops_across_ranks:.4f}",
                          cmd_args.global_rank)
             if tensorboard_writer:
@@ -217,6 +221,8 @@ def main():
                     tensorboard_writer.add_scalar("time (mean)", mean_step_end_to_end_time_across_ranks, global_step_count)
                     tensorboard_writer.add_scalar("samples per sec (mean)", mean_sample_per_second, global_step_count)
                     tensorboard_writer.add_scalar("tflops (mean)", mean_tflops_across_ranks, global_step_count)
+                    for gpu_metric_key, gpu_metric_value in gpu_metric.iterate_key_values():
+                        tensorboard_writer.add_scalar(gpu_metric_key, gpu_metric_value, global_step_count)
 
             if (step % cmd_args.save_interval == 0 and step > 0) or (epoch > 0 and step == 0):
                 print_rank_0(f"Saving model at {epoch=} {step=}", cmd_args.global_rank)
