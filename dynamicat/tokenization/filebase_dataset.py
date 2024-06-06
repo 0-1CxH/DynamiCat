@@ -45,7 +45,13 @@ class FileBaseDataset(GeneralDatasetBase):
             with open(file_path, "r") as f:
                 if self.metadata.file_format == "jsonl": # each line is a json object
                     for line in f:
-                        self.data_store.append(json.loads(line))
+                        try:
+                            line_json_obj = json.loads(line)
+                        except json.JSONDecodeError as e:
+                            logger.error(f"Error decoding line: {line}")
+                            continue
+                        if line_json_obj:
+                            self.data_store.append(line_json_obj)
                 elif self.metadata.file_format == "json": # single json list object, split as json objects
                     json_list_obj = json.load(f)
                     for json_obj in json_list_obj:

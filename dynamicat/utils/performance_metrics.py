@@ -28,7 +28,7 @@ class GPUUtilizationMetrics:
         gpu_info = [
             {
                 "used": pynvml.nvmlDeviceGetMemoryInfo(handle).used / self.B_TO_GB_SCALE,
-                "total": pynvml.nvmlDeviceGetMemoryInfo(handle).total / self.B_TO_GB_SCALE,
+                # "total": pynvml.nvmlDeviceGetMemoryInfo(handle).total / self.B_TO_GB_SCALE,
                 "free": pynvml.nvmlDeviceGetMemoryInfo(handle).free / self.B_TO_GB_SCALE,
                 "utilization": pynvml.nvmlDeviceGetUtilizationRates(handle).gpu
             } for handle in self.device_handles
@@ -39,6 +39,14 @@ class GPUUtilizationMetrics:
         for idx, gpu_info in enumerate(self.get_gpu_utilization()):
             for gpu_info_key in gpu_info:
                 yield f"gpu{idx}_{gpu_info_key}", gpu_info[gpu_info_key]
+
+    def get_total_memory_utilization(self):
+        gpu_info = self.get_gpu_utilization()
+        return sum([gpu["used"] for gpu in gpu_info]) / sum([gpu["used"] + gpu["free"] for gpu in gpu_info])
+
+    def get_total_used_memory(self):
+        gpu_info = self.get_gpu_utilization()
+        return sum([gpu["used"] for gpu in gpu_info])
 
 
 if __name__ == '__main__':

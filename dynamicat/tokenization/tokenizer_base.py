@@ -84,7 +84,8 @@ class GeneralDatasetBase:
                 func=self._single_record_to_tensor_static_wrapper,
                 items=[(text_to_tensor_func, record, tokenize_configs_iter) for record in self.iterate()]
             ):
-                yield _
+                if _:
+                    yield _
         else:
             for record in self.iterate():
                 input_item = (text_to_tensor_func, record, self.make_tokenization_configs())
