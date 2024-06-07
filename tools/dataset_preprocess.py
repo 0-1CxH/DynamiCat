@@ -25,7 +25,49 @@ def process_ultrachat(data_path, save_path):
 
     f_out.close()
 
+def process_cot_collection(data_path, save_path):
+    content = json.load(open(data_path))
+    f_out = open(save_path, 'w')
+    for record_id in content:
+        record = content[record_id]
+        f_out.write(
+            json.dumps({
+                "prompt": sft_role_content_template.format(role="user", content=record['source']),
+                "chosen": sft_role_content_template.format(role="assistant", content=record['rationale'] + record['target'])
+            }, ensure_ascii=False) + "\n"
+        )
+    f_out.close()
+
+
+def process_gsm8k(data_path, save_path):
+    df = pd.read_parquet(data_path)
+    f_out = open(save_path, 'w')
+    for _, record in df.iterrows():
+        f_out.write(
+            json.dumps({
+                "prompt": sft_role_content_template.format(role="user", content=record['question']),
+                "chosen": sft_role_content_template.format(role="assistant", content=record['answer'])
+            }, ensure_ascii=False) + "\n"
+        )
+    f_out.close()
+
+
+def process_dolly(data_path, save_path):
+    f_out = open(save_path, 'w')
+    with open(data_path) as f:
+        for line in f.readlines():
+            record = json.loads(line)
+            f_out.write(
+                json.dumps({
+                    "prompt": sft_role_content_template.format(role="user", content=record['instruction'] + record['context']),
+                    "chosen": sft_role_content_template.format(role="assistant", content=record['response'])
+                }, ensure_ascii=False) + "\n"
+            )
+    f_out.close()
+
+
+
 if __name__ == '__main__':
     import sys
-    process_ultrachat(sys.argv[1], sys.argv[2])
+    process_dolly(sys.argv[1], sys.argv[2])
 
