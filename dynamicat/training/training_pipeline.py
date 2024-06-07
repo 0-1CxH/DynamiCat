@@ -208,10 +208,11 @@ def main():
             mean_tflops_across_ranks = all_reduce_mean_of_tensor(tflops_tensor).item()
 
 
-            print_rank_0(f"{epoch=}, {step=}: time used(mean)={mean_step_end_to_end_time_across_ranks:.4f} "
+            print_rank_0(f"{epoch=} of {cmd_args.num_epochs}, {step=} of {num_training_steps_per_epoch}: "
+                         f"time used(mean)={mean_step_end_to_end_time_across_ranks:.4f} "
                          f"batch size(sum)={batch_size_sum_across_ranks} "
                          f"loss(mean)={mean_loss_per_device:.4f} "
-                         f"samples per second(sum)={mean_sample_per_second:.3f} "
+                         f"samples per sec(mean)={mean_sample_per_second:.3f} "
                          f"tflops(mean)={mean_tflops_across_ranks:.4f}",
                          cmd_args.global_rank)
             if tensorboard_writer:

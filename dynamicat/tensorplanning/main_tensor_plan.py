@@ -27,6 +27,7 @@ def parse_tensor_planning_args():
     parser.add_argument('--batch_size', type=int, help='Maximum plan size')
     parser.add_argument('--max_field_length', type=int, help='Maximum field length')
     parser.add_argument("--enable_smart_batching", action="store_true", help="Enable smart batching")
+    parser.add_argument("--verbose", action="store_true", help="Verbose mode")
     return parser.parse_args()
 
 def plan_tensor(cmd_args):
@@ -54,7 +55,8 @@ def plan_tensor(cmd_args):
     else: # use smart batching by default
         tensor_plan = tensor_planner.plan_tensor_records(tensor_records)
 
-    logger.debug(tensor_plan.formatted_string_of_whole_plan())
+    if cmd_args.verbose:
+        logger.debug(tensor_plan.formatted_string_of_whole_plan())
     logger.info(f"Tensor planned successfully, {len(tensor_plan)} plan items")
     logger.info(f"Tensor plan stats: {tensor_plan.get_plan_items_stats()}")
     torch.save(tensor_plan, cmd_args.output_path)
