@@ -3,12 +3,30 @@
 
 Efficient LLM training/inference pipeline with dynamic batch size, smart batching and dynamic padding that maximizes GPU memory utilization, training speed and inference throughput.
 
+## Methodology
 
+When doing SFT, there are data of different lengths in one dataset, the common data loader only provides training batch of fixed batch size and the batch size depends on the max length of the data in dataset, basically, the batch size is set to max_token_capacity_of_gpu / max_token_length_in_dataset.
+
+However, there are more data in dataset that is much shorter than the longest one, we can set bigger batch size for the shorter ones, and smaller batch size for the longer ones, this is **dynamic batch size**.
+
+For example: 
+```text
+GPU token capacity: 10K
+dataset token lengths: [1K, 1K, 1K, 2K, 2K, 3K, 5K, 5K]
+common fixed-batch-size data loder: 
+       batch size = 10K / max([1K, 1K, 1K, 2K, 2K, 3K, 5K, 5K]) = 2
+       data batches = [[1K, 1K], [1K, 2K], [2K, 3K], [5K, 5K]]]
+DynamiCat dynamic-batch-size data loader:
+        greedy put data in batches until read the GPU token capacity
+        data batches = [[1K, 1K, 1K, 2K, 2K, 3K], [5K, 5K]]
+```
+
+Note: when the batch size is not fixed, the real learning rate should scale based on the real batch size.
 
 ## Experiment
 
 ### TL;DR
-**On public dataset ranging from 1M to 500M tokens, DynamiCat achieves at least 2x throughput improvement compared to common sft.**
+**On public dataset ranging from 1M to 500M tokens, DynamiCat provides 20% to 150% improvement in throughput compared to common fixed-batch-size SFT**
 
 
 
@@ -19,12 +37,12 @@ Efficient LLM training/inference pipeline with dynamic batch size, smart batchin
 
 ### Datasets
 
-| dataset         | token count | unpacked record count | link                                                           |
-|-----------------|-------------|-----------------------|----------------------------------------------------------------|
-| gsm8k           | 1.74M       | 8.7K                  | https://huggingface.co/datasets/openai/gsm8k                   | 
-| alpaca cleaned  | 9.28M       | 51.8K                 | https://huggingface.co/datasets/yahma/alpaca-cleaned           |
-| belle chat 0.4M | 107.27M     | 396.0K                | https://huggingface.co/datasets/BelleGroup/generated_chat_0.4M |
-| ultra chat 200k | 476.23M     | 612.9K                | https://huggingface.co/datasets/HuggingFaceH4/ultrachat_200k   | 
+| dataset         | unpacked token count | unpacked record count | max token length | link                                                           |
+|-----------------|----------------------|-----------------------|------------------|----------------------------------------------------------------|
+| gsm8k           | 1.74M                | 8.7K                  | 551              | https://huggingface.co/datasets/openai/gsm8k                    | 
+| alpaca cleaned  | 9.28M                | 51.8K                 | 1473             | https://huggingface.co/datasets/yahma/alpaca-cleaned           |
+| belle chat 0.4M | 107.27M              | 396.0K                 | 879              | https://huggingface.co/datasets/BelleGroup/generated_chat_0.4M |
+| ultra chat 200k | 476.23M              | 612.9K                | 4096             | https://huggingface.co/datasets/HuggingFaceH4/ultrachat_200k | 
 
 
 ### Observations
@@ -35,7 +53,7 @@ batch size: max batch sizes that fits into GPU memory
 
 | dataset         | batch size | throughput(TFLOPS, per device) | GPU mem util(%) | time(sec) | final loss (smoothed) |
 |-----------------|------------|--------------------------------|-----------------|-----------|-----------------------|
-| gsm8k           |            |                                |                 |           |                       | 
+| gsm8k           | 24         | 49.53                          | 88.19           | 363       |                       | 
 | alpaca cleaned  | 8          | 25.49                          | 76.88           | 4372      | 0.931                 |
 | belle chat 0.4M | 12         | 33.83                          | 77.18           | 23757     | 1.631                 |
 | ultra chat 200k | 2          |                                |                 |           |                       |
@@ -47,7 +65,7 @@ batch token capacity: find the max token capacity that a batch holds and maximiz
 
 | dataset         | batch token capacity | throughput(TFLOPS, per device) | GPU mem util(%) | time(sec) | final loss (smoothed) | 
 |-----------------|----------------------|--------------------------------|-----------------|-----------|-----------------------|
-| gsm8k           |                      |                                |                 |           |                       | 
+| gsm8k           | 13.5K                | 62.55                          | 93.02           | 164       |                       | 
 | alpaca cleaned  | 12K                  | 64.43                          | 90.90           | 812       | 0.947                 | 
 | belle chat 0.4M | 13K                  | 70.42                          | 98.99           | 8451      | 1.614                 | 
 | ultra chat 200k |                      |                                |                 |           |                       |
@@ -57,7 +75,7 @@ compare DynamiCat to common sft:
 
 | dataset         | throughput(ratio) | GPU memory utilization (percentage points) | training time (ratio) | loss delta | 
 |-----------------|-------------------|--------------------------------------------|-----------------------|------------|
-| gsm8k           |                   |                                            |                       |            |                  
+| gsm8k           | 1.26x             | +4.83                                      | 0.45x                 |            |                  
 | alpaca cleaned  | 2.53x             | +14.02                                     | 0.19x                 | +0.016     | 
 | belle chat 0.4M | 2.08x             | +21.81                                     | 0.36x                 | -0.017     |
 | ultra chat 200k |                   |                                            |                       |            |
