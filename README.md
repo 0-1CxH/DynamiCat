@@ -3,7 +3,7 @@
 
 
 ## Abstract
-**On public dataset ranging from 1M to 500M tokens, DynamiCat provides 20% to 150% improvement in throughput compared to common fixed-batch-size SFT.**
+**On public dataset ranging from 1M to 500M tokens, DynamiCat provides 20% to 280% improvement in throughput compared to common fixed-batch-size SFT.**
 
 
 ## Methodology
@@ -98,7 +98,7 @@ batch size: max batch sizes that fits into GPU memory
 | gsm8k           | 24         | 49.53                          | 88.19           | 363       |                       | 
 | alpaca cleaned  | 8          | 25.49                          | 76.88           | 4372      | 0.931                 |
 | belle chat 0.4M | 12         | 33.83                          | 77.18           | 23757     | 1.631                 |
-| ultra chat 200k | 2          |                                |                 |           |                       |
+| ultra chat 200k | 2          | 16.91                          | 76.64           | 147096    |                       |
 
 
 #### DynamiCat sft 
@@ -120,7 +120,7 @@ compare DynamiCat to common sft:
 | gsm8k           | 1.26x             | +4.83                                      | 0.45x                 |            |                  
 | alpaca cleaned  | 2.53x             | +14.02                                     | 0.19x                 | +0.016     | 
 | belle chat 0.4M | 2.08x             | +21.81                                     | 0.36x                 | -0.017     |
-| ultra chat 200k |                   |                                            |                       |            |
+| ultra chat 200k | 3.80x             | +20.46                                     | 0.28x                 |            |
 
 
 ![compare_alpaca.png](experiment%2Fimg%2Fcompare_alpaca.png)
