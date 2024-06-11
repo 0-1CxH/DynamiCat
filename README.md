@@ -95,10 +95,10 @@ batch size: max batch sizes that fits into GPU memory
 
 | dataset         | batch size | throughput(TFLOPS, per device) | GPU mem util(%) | time(sec) | final loss (smoothed) |
 |-----------------|------------|--------------------------------|-----------------|-----------|-----------------------|
-| gsm8k           | 24         | 49.53                          | 88.19           | 363       |                       | 
+| gsm8k           | 24         | 49.53                          | 88.19           | 363       | 0.431                 | 
 | alpaca cleaned  | 8          | 25.49                          | 76.88           | 4372      | 0.931                 |
 | belle chat 0.4M | 12         | 33.83                          | 77.18           | 23757     | 1.631                 |
-| ultra chat 200k | 2          | 16.91                          | 76.64           | 147096    |                       |
+| ultra chat 200k | 2          | 16.91                          | 76.64           | 147096    | 0.986                 |
 
 
 #### DynamiCat sft 
@@ -107,20 +107,20 @@ batch token capacity: find the max token capacity that a batch holds and maximiz
 
 | dataset         | batch token capacity | throughput(TFLOPS, per device) | GPU mem util(%) | time(sec) | final loss (smoothed) | 
 |-----------------|----------------------|--------------------------------|-----------------|-----------|-----------------------|
-| gsm8k           | 13.5K                | 62.55                          | 93.02           | 164       |                       | 
+| gsm8k           | 13.5K                | 62.55                          | 93.02           | 164       | 0.658                 | 
 | alpaca cleaned  | 12K                  | 64.43                          | 90.90           | 812       | 0.947                 | 
 | belle chat 0.4M | 13K                  | 70.42                          | 98.99           | 8451      | 1.614                 | 
-| ultra chat 200k | 11.5K                | 64.20                          | 97.10           | 41106     |                       |
+| ultra chat 200k | 11.5K                | 64.20                          | 97.10           | 41106     | 0.884                 |
 
 ### Comparison & Results
 compare DynamiCat to common sft:
 
 | dataset         | throughput(ratio) | GPU memory utilization (percentage points) | training time (ratio) | loss delta | 
 |-----------------|-------------------|--------------------------------------------|-----------------------|------------|
-| gsm8k           | 1.26x             | +4.83                                      | 0.45x                 |            |                  
+| gsm8k           | 1.26x             | +4.83                                      | 0.45x                 | +0.227     |                  
 | alpaca cleaned  | 2.53x             | +14.02                                     | 0.19x                 | +0.016     | 
 | belle chat 0.4M | 2.08x             | +21.81                                     | 0.36x                 | -0.017     |
-| ultra chat 200k | 3.80x             | +20.46                                     | 0.28x                 |            |
+| ultra chat 200k | 3.80x             | +20.46                                     | 0.28x                 | -0.102     |
 
 
 ![compare_alpaca.png](experiment%2Fimg%2Fcompare_alpaca.png)
