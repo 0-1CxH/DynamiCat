@@ -5,6 +5,7 @@
 ## Abstract
 **On public dataset ranging from 1M to 500M tokens, DynamiCat provides 20% to 280% improvement in throughput compared to common fixed-batch-size SFT.**
 
+![compare_loss_curve.png](experiment%2Fimg%2Fcompare_loss_curve.png)
 
 ## Methodology
 
@@ -122,10 +123,11 @@ compare DynamiCat to common sft:
 | belle chat 0.4M | 2.08x             | +21.81                                     | 0.36x                 | -0.017     |
 | ultra chat 200k | 3.80x             | +20.46                                     | 0.28x                 | -0.102     |
 
-
 ![compare_alpaca.png](experiment%2Fimg%2Fcompare_alpaca.png)
-![belle_compare.png](experiment%2Fimg%2Fbelle_compare.png)
-TODO: change image to new tags and add other datasets 
+![compare_belle.png](experiment%2Fimg%2Fcompare_belle.png)
+![compare_gsm.png](experiment%2Fimg%2Fcompare_gsm.png)
+![compare_ultra.png](experiment%2Fimg%2Fcompare_ultra.png)
+
 
 # Quick Start
 
