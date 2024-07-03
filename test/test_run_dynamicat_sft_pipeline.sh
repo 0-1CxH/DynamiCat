@@ -4,7 +4,7 @@ deepspeed dynamicat/training/training_pipeline.py \
   --planned_tensor_file_path test/test_jsonl_data_GPUMemoryRestricted_15000.pt \
   --dataset_specific_task_type sft \
   --model_path test/test_model \
-  --zero_stage 3 \
+  --zero_stage 2 \
   --use_bf16 \
   --learning_rate 1e-5 \
   --use_tensorboard \

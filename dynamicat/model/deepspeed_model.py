@@ -6,7 +6,6 @@ from deepspeed.runtime.zero.partition_parameters import ZeroParamStatus
 from dynamicat.model.hf_model import HFModelProvider
 
 
-
 class DeepSpeedHFModelProvider(HFModelProvider):
 
     @classmethod
@@ -18,14 +17,16 @@ class DeepSpeedHFModelProvider(HFModelProvider):
             if is_zero_stage_3:
                 raise ValueError("Zero stage 3 is not supported for single GPU")
             else:
+                logger.info("On single GPU, use normal HF save.")
                 super().save(model_to_save, save_folder)
         else: # Multi GPU
             if is_zero_stage_3:
+                logger.info("On multiple GPUs, Zero stage 3 enabled, need collect params before saving.")
                 cls._save_deepspeed_model_of_zero_stage_3(model_to_save, save_folder, global_rank)
             else:
                 if global_rank == 0: # Only rank 0 saves the model
+                    logger.info("On multiple GPUs, save on rank 0 only.")
                     super().save(model_to_save, save_folder)
-
 
 
     @classmethod
@@ -44,19 +45,16 @@ class DeepSpeedHFModelProvider(HFModelProvider):
                 logger.warning(f"Skipping {param_name} as it is a LoRA parameter")
                 continue
             if hasattr(parameters, 'ds_id'):
+                logger.trace(f"collecting {param_name}({parameters.ds_status}) from ds_id={parameters.ds_id}")
                 if parameters.ds_status == ZeroParamStatus.NOT_AVAILABLE:
                     with deepspeed.zero.GatheredParameters([parameters], enabled=True):
-                         parameter_to_save = parameters.data
+                         parameter_to_save = parameters.data.cpu()
             else:
-                parameter_to_save = parameters
+                parameter_to_save = parameters.cpu()
             if global_rank <= 0:
-                output_state_dict[param_name] = parameter_to_save.cpu()
-                # logger.debug(f"adding {param_name} with shape {parameter_to_save.shape}")
-
+                output_state_dict[param_name] = parameter_to_save
         if global_rank <= 0:
             torch.save(output_state_dict, output_model_file)
             logger.info(f"saved model weights to {output_model_file}")
         del output_state_dict
-
-
 

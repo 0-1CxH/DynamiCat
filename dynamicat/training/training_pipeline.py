@@ -233,7 +233,7 @@ def main():
                     model,
                     os.path.join(cmd_args.checkpoint_save_path, f"checkpoint-ep{epoch}-step{step}"),
                     global_rank=cmd_args.global_rank,
-                    is_zero_stage_3=cmd_args.zero_offload
+                    is_zero_stage_3=cmd_args.zero_stage==3
                 )
 
     # finish
@@ -242,7 +242,7 @@ def main():
         model,
         os.path.join(cmd_args.checkpoint_save_path),
         global_rank=cmd_args.global_rank,
-        is_zero_stage_3=cmd_args.zero_offload
+        is_zero_stage_3=cmd_args.zero_stage==3
     )
 
 
